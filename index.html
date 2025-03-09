@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>City Infrastructure Evolution</title>
+    
+    <!-- CSS стили -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/map.css">
+    
+    <!-- Leaflet для карт -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- PyScript -->
+    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+    
+    <!-- JavaScript интеграция -->
+    <script src="js/helpers.js"></script>
+    
+    <!-- PyScript конфигурация -->
+    <py-config>
+        packages = [
+            "requests",
+            "numpy",
+            "pandas"
+        ]
+        [[fetch]]
+        files = [
+            "./pyscript/actions/__init__.py",
+            "./pyscript/actions/city_actions.py",
+            "./pyscript/actions/simulation_actions.py",
+            "./pyscript/actions/geo_actions.py",
+            "./pyscript/store/__init__.py",
+            "./pyscript/store/app_store.py",
+            "./pyscript/dispatch/__init__.py",
+            "./pyscript/dispatch/dispatcher.py",
+            "./pyscript/views/__init__.py",
+            "./pyscript/views/city_selector.py",
+            "./pyscript/views/timeline.py",
+            "./pyscript/views/map_view.py",
+            "./pyscript/views/info_panel.py",
+            "./pyscript/utils/__init__.py",
+            "./pyscript/utils/api_client.py",
+            "./pyscript/utils/geo_utils.py",
+            "./pyscript/config.py",
+            "./pyscript/main.py"
+        ]
+    </py-config>
+</head>
+<body>
+    <header>
+        <h1>City Infrastructure Evolution</h1>
+        <div id="city-selector-container"></div>
+    </header>
+    
+    <main>
+        <div class="timeline-container" id="timeline-container"></div>
+        
+        <div class="content-container">
+            <div id="map-container" class="map-container"></div>
+            
+            <div id="info-panel" class="info-panel">
+                <h2>Information Panel</h2>
+                <div id="info-content"></div>
+            </div>
+        </div>
+    </main>
+    
+    <footer>
+        <p>&copy; 2023 City Infrastructure Evolution Project</p>
+    </footer>
+    
+    <!-- PyScript код -->
+    <py-script src="./pyscript/main.py"></py-script>
+</body>
+</html>
+
