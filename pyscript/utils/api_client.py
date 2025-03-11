@@ -6,9 +6,10 @@ import asyncio
 from pyodide.http import pyfetch
 from ..config import API_BASE_URL, API_TIMEOUT
 
+
 class APIClient:
     """Client for making API requests"""
-    
+
     @staticmethod
     async def get(endpoint, params=None):
         """
@@ -22,12 +23,12 @@ class APIClient:
             API response as Python object
         """
         url = f"{API_BASE_URL}/{endpoint.lstrip('/')}"
-        
+
         # Add query parameters if provided
         if params:
             query_string = "&".join([f"{k}={v}" for k, v in params.items()])
             url = f"{url}?{query_string}"
-        
+
         try:
             response = await pyfetch(
                 url=url,
@@ -35,16 +36,16 @@ class APIClient:
                 headers={"Content-Type": "application/json"},
                 timeout=API_TIMEOUT
             )
-            
+
             if response.status >= 400:
                 print(f"API Error ({response.status}): {await response.text()}")
                 return None
-                
+
             return await response.json()
         except Exception as e:
             print(f"API Request Failed: {str(e)}")
             return None
-    
+
     @staticmethod
     async def post(endpoint, data):
         """
@@ -58,7 +59,7 @@ class APIClient:
             API response as Python object
         """
         url = f"{API_BASE_URL}/{endpoint.lstrip('/')}"
-        
+
         try:
             response = await pyfetch(
                 url=url,
@@ -67,13 +68,12 @@ class APIClient:
                 headers={"Content-Type": "application/json"},
                 timeout=API_TIMEOUT
             )
-            
+
             if response.status >= 400:
                 print(f"API Error ({response.status}): {await response.text()}")
                 return None
-                
+
             return await response.json()
         except Exception as e:
             print(f"API Request Failed: {str(e)}")
             return None
-

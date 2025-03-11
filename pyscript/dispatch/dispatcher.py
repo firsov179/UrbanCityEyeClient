@@ -47,6 +47,12 @@ class Dispatcher:
             
         elif action_type == "SET_AVAILABLE_YEARS":
             self._store.update_state({"available_years": payload, "loading": False})
+
+        elif action_type == "SET_ANIMATION_STATE":
+            if payload is None:
+                payload = {"active": False}
+            elif isinstance(payload, bool):
+                payload = {"active": payload}
             
         elif action_type == "SELECT_YEAR":
             self._store.update_state({

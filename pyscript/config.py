@@ -17,4 +17,3 @@ DEFAULT_CITY_ID = 1  # London
 DEFAULT_YEAR = 2000
 MAX_INFO_PANEL_ITEMS = 10
 TIMELINE_STEP = 5  # Years between timeline markers
-

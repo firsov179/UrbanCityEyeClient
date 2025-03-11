@@ -4,22 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>City Infrastructure Evolution</title>
-    
+
     <!-- CSS стили -->
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/map.css">
-    
+
     <!-- Leaflet для карт -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script type="module" src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <!-- PyScript -->
-    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
-    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
-    
+    <link rel="stylesheet" href="https://pyscript.net/releases/2025.2.4/core.css" />
+    <script type="module" defer src="https://pyscript.net/releases/2025.2.4/core.js"></script>
+
     <!-- JavaScript интеграция -->
     <script src="js/helpers.js"></script>
-    
+
+    <py-script>
+    print("PyScript is loaded and running!")
+    </py-script>
+
+    <!-- Ваш основной скрипт -->
+    <py-script src="./pyscript/main.py"></py-script>
+
     <!-- PyScript конфигурация -->
     <py-config>
         packages = [
@@ -55,24 +62,24 @@
         <h1>City Infrastructure Evolution</h1>
         <div id="city-selector-container"></div>
     </header>
-    
+
     <main>
         <div class="timeline-container" id="timeline-container"></div>
-        
+
         <div class="content-container">
             <div id="map-container" class="map-container"></div>
-            
+
             <div id="info-panel" class="info-panel">
                 <h2>Information Panel</h2>
                 <div id="info-content"></div>
             </div>
         </div>
     </main>
-    
+
     <footer>
-        <p>&copy; 2023 City Infrastructure Evolution Project</p>
+        <p>&copy; 2025 Urban City Eye </p>
     </footer>
-    
+
     <!-- PyScript код -->
     <py-script src="./pyscript/main.py"></py-script>
 </body>

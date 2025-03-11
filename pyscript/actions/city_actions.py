@@ -5,9 +5,10 @@ import asyncio
 from ..utils.api_client import APIClient
 from ..dispatch.dispatcher import Dispatcher
 
+
 class CityActions:
     """Actions for managing cities"""
-    
+
     @staticmethod
     async def fetch_cities():
         """
@@ -18,16 +19,16 @@ class CityActions:
         """
         dispatcher = Dispatcher()
         dispatcher.dispatch("CITIES_REQUEST")
-        
-        response = await APIClient.get("cities")
-        
+
+        response = await APIClient.get("cities/")
+
         if response:
             dispatcher.dispatch("SET_CITIES", response)
             return response
         else:
             dispatcher.dispatch("API_ERROR", "Failed to fetch cities")
             return None
-    
+
     @staticmethod
     def select_city(city_id):
         """
@@ -38,10 +39,10 @@ class CityActions:
         """
         dispatcher = Dispatcher()
         dispatcher.dispatch("SELECT_CITY", city_id)
-        
+
         # After selecting a city, fetch available years
         asyncio.ensure_future(CityActions.fetch_available_years(city_id))
-    
+
     @staticmethod
     async def fetch_available_years(city_id):
         """
@@ -55,21 +56,21 @@ class CityActions:
         """
         dispatcher = Dispatcher()
         dispatcher.dispatch("YEARS_REQUEST")
-        
+
         response = await APIClient.get(f"simulations/city/{city_id}/years")
-        
+
         if response:
             dispatcher.dispatch("SET_AVAILABLE_YEARS", response)
-            
+
             # If there are years available, select the first one by default
             if response and len(response) > 0:
                 CityActions.select_year(city_id, response[0])
-                
+
             return response
         else:
             dispatcher.dispatch("API_ERROR", f"Failed to fetch years for city {city_id}")
             return None
-    
+
     @staticmethod
     def select_year(city_id, year):
         """
@@ -81,10 +82,10 @@ class CityActions:
         """
         dispatcher = Dispatcher()
         dispatcher.dispatch("SELECT_YEAR", year)
-        
+
         # After selecting a year, fetch the simulation
         asyncio.ensure_future(CityActions.fetch_simulation(city_id, year))
-    
+
     @staticmethod
     async def fetch_simulation(city_id, year):
         """
@@ -99,21 +100,21 @@ class CityActions:
         """
         dispatcher = Dispatcher()
         dispatcher.dispatch("SIMULATION_REQUEST")
-        
+
         response = await APIClient.get(f"simulations/city/{city_id}/year/{year}")
-        
+
         if response:
             dispatcher.dispatch("SET_SIMULATION", response)
-            
+
             # After fetching simulation, get geo objects for this simulation
             if "id" in response:
                 asyncio.ensure_future(CityActions.fetch_geo_objects(response["id"]))
-                
+
             return response
         else:
             dispatcher.dispatch("API_ERROR", f"Failed to fetch simulation for city {city_id}, year {year}")
             return None
-    
+
     @staticmethod
     async def fetch_geo_objects(simulation_id, bbox=None):
         """
@@ -128,7 +129,7 @@ class CityActions:
         """
         dispatcher = Dispatcher()
         dispatcher.dispatch("GEO_OBJECTS_REQUEST")
-        
+
         # Prepare query parameters if bbox is provided
         params = {}
         if bbox:
@@ -138,16 +139,16 @@ class CityActions:
                 "maxx": bbox[2],
                 "maxy": bbox[3]
             }
-        
+
         response = await APIClient.get(f"geo-objects/simulation/{simulation_id}", params)
-        
+
         if response:
             dispatcher.dispatch("SET_GEO_OBJECTS", response)
             return response
         else:
             dispatcher.dispatch("API_ERROR", f"Failed to fetch geo objects for simulation {simulation_id}")
             return None
-    
+
     @staticmethod
     def select_geo_object(geo_object):
         """
@@ -158,10 +159,10 @@ class CityActions:
         """
         dispatcher = Dispatcher()
         dispatcher.dispatch("SELECT_OBJECT", geo_object)
-        
+
         # Open the info panel when an object is selected
         dispatcher.dispatch("TOGGLE_INFO_PANEL", True)
-    
+
     @staticmethod
     async def fetch_city_details(city_id):
         """
@@ -175,16 +176,16 @@ class CityActions:
         """
         dispatcher = Dispatcher()
         dispatcher.dispatch("CITY_DETAILS_REQUEST")
-        
+
         response = await APIClient.get(f"cities/{city_id}")
-        
+
         if response:
             dispatcher.dispatch("SET_CITY_DETAILS", response)
             return response
         else:
             dispatcher.dispatch("API_ERROR", f"Failed to fetch details for city {city_id}")
             return None
-    
+
     @staticmethod
     async def fetch_geo_object_details(geo_object_id):
         """
@@ -198,16 +199,16 @@ class CityActions:
         """
         dispatcher = Dispatcher()
         dispatcher.dispatch("OBJECT_DETAILS_REQUEST")
-        
+
         response = await APIClient.get(f"geo-objects/{geo_object_id}")
-        
+
         if response:
             dispatcher.dispatch("SET_OBJECT_DETAILS", response)
             return response
         else:
             dispatcher.dispatch("API_ERROR", f"Failed to fetch details for geo object {geo_object_id}")
             return None
-    
+
     @staticmethod
     def update_map_view(center, zoom):
         """
@@ -219,7 +220,7 @@ class CityActions:
         """
         dispatcher = Dispatcher()
         dispatcher.dispatch("SET_MAP_VIEW", {"center": center, "zoom": zoom})
-    
+
     @staticmethod
     def toggle_info_panel(is_open=None):
         """
@@ -231,4 +232,3 @@ class CityActions:
         """
         dispatcher = Dispatcher()
         dispatcher.dispatch("TOGGLE_INFO_PANEL", is_open)
-
