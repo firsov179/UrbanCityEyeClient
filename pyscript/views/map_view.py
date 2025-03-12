@@ -6,7 +6,8 @@ import json
 from pyodide.ffi import create_proxy
 from ..store.app_store import AppStore
 from ..actions.geo_actions import GeoActions
-from ..config import MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM, MAP_TILE_LAYER, MAP_ATTRIBUTION
+from ..actions.city_actions import CityActions
+from ..config import MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM
 
 
 class MapView:
@@ -15,7 +16,7 @@ class MapView:
     def __init__(self, container_id="map-container"):
         """
         Initialize the map view
-        
+
         Args:
             container_id: ID of the HTML container element
         """
@@ -27,6 +28,8 @@ class MapView:
         self.layers = {}
         self.popup = None
         self.selected_layer = None
+        self._proxy_handlers = {}
+        self._updating_map = False
 
     def initialize(self):
         """Initialize the component, create the map and subscribe to store updates"""
@@ -38,7 +41,36 @@ class MapView:
         self.create_map()
 
         # Subscribe to store changes
-        self.unsubscribe = self.store.subscribe(create_proxy(self.on_state_change))
+        self._state_change_handler = create_proxy(self.on_state_change)
+        self.unsubscribe = self.store.subscribe(self._state_change_handler)
+
+    def _clear_event_handlers(self):
+        """Clear all event handlers and destroy proxies"""
+        if not self.map:
+            return
+
+        for event_name, handler in self._proxy_handlers.items():
+            try:
+                self.map.off(event_name, handler)
+                handler.destroy()
+            except Exception as e:
+                print(f"Error removing {event_name} handler: {e}")
+
+        # Clear the handler dictionary
+        self._proxy_handlers = {}
+
+    def _setup_event_handlers(self):
+        """Set up event handlers for the map with proper proxy management"""
+
+        # Create and save proxy objects
+        self._proxy_handlers['click'] = create_proxy(self.on_map_click)
+        self._proxy_handlers['zoomend'] = create_proxy(self.on_map_zoom)
+        self._proxy_handlers['moveend'] = create_proxy(self.on_map_move)
+
+        # Add handlers to the map
+        self.map.on("click", self._proxy_handlers['click'])
+        self.map.on("zoomend", self._proxy_handlers['zoomend'])
+        self.map.on("moveend", self._proxy_handlers['moveend'])
 
     def create_map(self):
         """Create the Leaflet map instance"""
@@ -48,64 +80,50 @@ class MapView:
                 print(f"Error: Map container '{self.container_id}' not found in DOM")
                 return
 
-            # Check if the container already has a map
-            if hasattr(self, 'map') and self.map:
+            # Remove existing map if it exists
+            if self.map:
                 print("Removing existing map instance")
-                self.map.remove()
+                self._clear_event_handlers()
+                try:
+                    self.map.remove()
+                except Exception as e:
+                    print(f"Error removing old map: {e}")
                 self.map = None
 
-            # Clear any previous content
-            if self.container.childElementCount > 0:
-                self.container.innerHTML = ""
-
-            # Validate and fix center coordinates
-            from ..config import MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM
-
-            # Debug: log the values
-            print(f"MAP_DEFAULT_CENTER: {MAP_DEFAULT_CENTER}, type: {type(MAP_DEFAULT_CENTER)}")
-
-            # Default center for London if coordinates are invalid
-            center = [51.5074, -0.1278]  # [lat, lng] - London coordinates
-
-            # Check if MAP_DEFAULT_CENTER is valid
-            if MAP_DEFAULT_CENTER and isinstance(MAP_DEFAULT_CENTER, list) and len(MAP_DEFAULT_CENTER) == 2:
-                # Verify each coordinate is a number
-                if all(isinstance(coord, (int, float)) for coord in MAP_DEFAULT_CENTER):
-                    center = MAP_DEFAULT_CENTER
-                    print(f"Using config center: {center}")
-                else:
-                    print(f"Invalid coordinates in MAP_DEFAULT_CENTER: {MAP_DEFAULT_CENTER}")
+            # Ensure valid center coordinates
+            if not MAP_DEFAULT_CENTER or len(MAP_DEFAULT_CENTER) != 2:
+                center = [51.5074, -0.1278]  # Default London coordinates
+                print(f"Using default center: {center}")
             else:
-                print(f"Invalid MAP_DEFAULT_CENTER format: {MAP_DEFAULT_CENTER}")
+                center = MAP_DEFAULT_CENTER
+                print(f"Using configured center: {center}")
 
-            # Ensure zoom is valid
-            zoom = 13  # Default zoom
-            if isinstance(MAP_DEFAULT_ZOOM, int):
-                zoom = MAP_DEFAULT_ZOOM
+            # Create Leaflet LatLng object for center
+            center_obj = js.L.latLng(center[0], center[1])
+
+            # Ensure valid zoom
+            zoom = MAP_DEFAULT_ZOOM if isinstance(MAP_DEFAULT_ZOOM, int) else 13
 
             print(f"Creating map with center: {center}, zoom: {zoom}")
-
-            # Create a map with the validated center and zoom
-            # Ensure the order is [lat, lng]
-            self.map = js.L.map(self.container_id).setView([center[0], center[1]], zoom)
+            self.map = js.L.map(self.container_id).setView(center_obj, zoom)
 
             # Add tile layer
-            from ..config import MAP_TILE_LAYER, MAP_ATTRIBUTION
-
-            # Use default values if config values are not available
-            tile_layer = MAP_TILE_LAYER if MAP_TILE_LAYER else 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-            attribution = MAP_ATTRIBUTION if MAP_ATTRIBUTION else '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-
-            js.L.tileLayer(tile_layer, {
-                "attribution": attribution,
+            js.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                "attribution": '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
                 "maxZoom": 19
             }).addTo(self.map)
 
-            # Add event handlers
-            from pyodide.ffi import create_proxy
-            self.map.on("click", create_proxy(self.on_map_click))
-            self.map.on("zoomend", create_proxy(self.on_map_zoom))
-            self.map.on("moveend", create_proxy(self.on_map_move))
+            # Добавление стиля для скрытия флага Украины в атрибуции
+            js.eval("""
+            (function() {
+                var style = document.createElement('style');
+                style.textContent = '.leaflet-attribution-flag { display: none !important; }';
+                document.head.appendChild(style);
+            })();
+            """)
+
+            # Add event handlers with proxy preservation
+            self._setup_event_handlers()
 
             print("Map created successfully")
 
@@ -114,169 +132,209 @@ class MapView:
             print(f"Error creating map: {str(e)}")
             print(traceback.format_exc())
 
+    def cleanup(self):
+        """Clean up resources when the component is destroyed"""
+        print("Cleaning up MapView resources")
+
+        if self.unsubscribe:
+            try:
+                self.unsubscribe()
+                self.unsubscribe = None
+            except Exception as e:
+                print(f"Error during unsubscribe: {e}")
+
+        if hasattr(self, '_state_change_handler'):
+            try:
+                self._state_change_handler.destroy()
+            except Exception as e:
+                print(f"Error destroying state change handler: {e}")
+
+        self._clear_event_handlers()
+
+        if self.map:
+            try:
+                self.map.remove()
+                self.map = None
+            except Exception as e:
+                print(f"Error removing map: {e}")
+
     def on_state_change(self, state):
         """
-        Handle state changes from the store
-        
+        Обработка изменений состояния хранилища
+
         Args:
-            state: Current application state
+            state: Текущее состояние приложения
         """
-        # Check for new geo objects
+        # Если карта обновляется программно, не реагируем на изменения состояния
+        if self._updating_map:
+            print("Skipping state update while map is being programmatically updated")
+            return
+
+        # Проверка на наличие новых гео-объектов
         geo_objects = state.get("geo_objects")
 
-        if geo_objects:
-            self.update_geo_layers(geo_objects)
+        if geo_objects and self.map:
+            # Сохраняем текущий зум перед обновлением слоя
+            current_zoom = self.map.getZoom()
 
-        # Check for selected object
+            # Устанавливаем флаг программного обновления
+            self._updating_map = True
+            try:
+                # Обновляем слой с гео-объектами
+                self.update_geo_layers(geo_objects.get('data', geo_objects), preserve_zoom=True)
+            finally:
+                # Сбрасываем флаг
+                self._updating_map = False
+
+        # Проверка на наличие выбранного объекта
         selected_object = state.get("selected_object")
 
-        if selected_object:
-            self.highlight_selected_object(selected_object)
-        else:
+        if selected_object and self.map:
+            # Устанавливаем флаг программного обновления
+            self._updating_map = True
+            try:
+                self.highlight_selected_object(selected_object, preserve_zoom=True)
+            finally:
+                # Сбрасываем флаг
+                self._updating_map = False
+        elif selected_object is None and self.selected_layer:
             self.clear_selection()
 
-        # Check for map view changes
+        # Обрабатываем изменение представления карты только если это явный запрос
+        # (не при изменении года/гео-объектов)
         map_center = state.get("map_center")
         map_zoom = state.get("map_zoom")
 
-        if map_center and self.map:
-            self.map.setView(map_center, map_zoom if map_zoom else self.map.getZoom())
+        if self.map and map_center and isinstance(map_center, list) and len(map_center) == 2 and not self._updating_map:
+            # Получение текущих значений карты
+            current_center = self.map.getCenter()
+            current_zoom = self.map.getZoom()
 
-    def update_geo_layers(self, geo_objects):
+            # Проверяем, есть ли существенные изменения центра
+            try:
+                center_lat_changed = abs(current_center.lat - map_center[0]) > 0.0001
+                center_lng_changed = abs(current_center.lng - map_center[1]) > 0.0001
+                zoom_changed = map_zoom is not None and current_zoom != map_zoom
+            except Exception as e:
+                print(f"Error comparing map coordinates: {e}")
+                center_lat_changed = True
+                center_lng_changed = True
+                zoom_changed = map_zoom is not None
+
+            # Обновление представления карты только при наличии реальных изменений
+            if center_lat_changed or center_lng_changed or zoom_changed:
+                # Устанавливаем флаг программного обновления
+                self._updating_map = True
+                try:
+                    # Используем только валидные координаты
+                    new_zoom = map_zoom if map_zoom is not None else current_zoom
+                    self.map.setView([map_center[0], map_center[1]], new_zoom)
+                    print(f"Updated map view to center: {map_center}, zoom: {new_zoom}")
+                except Exception as e:
+                    print(f"Error updating map view: {e}")
+                finally:
+                    # Сбрасываем флаг
+                    self._updating_map = False
+
+    def update_geo_layers(self, geo_objects, preserve_zoom=False):
         """
         Update map layers with new geographic objects
-        
+
         Args:
             geo_objects: GeoJSON FeatureCollection
+            preserve_zoom: Whether to preserve current zoom level after update
         """
-        # Clear existing layers
-        if 'main' in self.layers:
-            self.map.removeLayer(self.layers['main'])
-
-        # Parse the GeoJSON if it's a string
-        if isinstance(geo_objects, str):
-            try:
-                geo_objects = json.loads(geo_objects)
-            except Exception as e:
-                print(f"Error parsing GeoJSON: {str(e)}")
-                return
-
-        # Create the GeoJSON layer
         try:
-            # Style function for GeoJSON features
-            style_function = """
-            function(feature) {
-                let role = feature.properties.role || '';
-                
-                // Default style
-                let style = {
-                    weight: 2,
-                    opacity: 0.7,
-                    color: '#3388ff',
-                    fillOpacity: 0.2
-                };
-                
-                // Style based on feature role
-                if (role.includes('highway')) {
-                    style.color = '#FF5733';
-                    style.weight = 3;
-                } else if (role.includes('railway')) {
-                    style.color = '#581845';
-                    style.weight = 2;
-                    style.dashArray = '4,4';
-                } else if (role.includes('waterway')) {
-                    style.color = '#3D85C6';
-                    style.weight = 2;
-                } else if (role.includes('building')) {
-                    style.color = '#666666';
-                    style.fillOpacity = 0.4;
-                    style.weight = 1;
+            # Сохраняем текущий зум и центр, если нужно
+            if preserve_zoom and self.map:
+                current_zoom = self.map.getZoom()
+                current_center = self.map.getCenter()
+
+            # Clear existing layers
+            if 'main' in self.layers and self.layers['main']:
+                try:
+                    self.map.removeLayer(self.layers['main'])
+                except Exception as e:
+                    print(f"Error removing existing layer: {e}")
+                self.layers['main'] = None
+
+            # Конвертируем geo_objects в строку JSON, затем в JavaScript объект
+            import json
+
+            # Преобразуем в JSON строку
+            geo_json_str = json.dumps(geo_objects)
+
+            # Преобразуем JSON строку в JavaScript объект
+            geo_json_obj = js.JSON.parse(geo_json_str)
+
+            # Используем простые опции
+            options = {
+                "style": {
+                    "color": "#3388ff",
+                    "weight": 2,
+                    "opacity": 0.7,
+                    "fillOpacity": 0.2
                 }
-                
-                return style;
             }
-            """
 
-            # Point to layer function for markers
-            point_to_layer = """
-            function(feature, latlng) {
-                let role = feature.properties.role || '';
-                let marker;
-                
-                if (role.includes('amenity')) {
-                    marker = L.circleMarker(latlng, {
-                        radius: 6,
-                        fillColor: '#FF9900',
-                        color: '#000',
-                        weight: 1,
-                        opacity: 1,
-                        fillOpacity: 0.8
-                    });
-                } else {
-                    marker = L.circleMarker(latlng, {
-                        radius: 4,
-                        fillColor: '#3388ff',
-                        color: '#fff',
-                        weight: 1,
-                        opacity: 1,
-                        fillOpacity: 0.8
-                    });
-                }
-                
-                return marker;
-            }
-            """
+            # Создаем слой с JavaScript объектом
+            layer = js.L.geoJSON(geo_json_obj, options)
 
-            # On each feature function for adding popups and events
-            on_each_feature = """
-            function(feature, layer) {
-                if (feature.properties && feature.properties.name) {
-                    layer.bindTooltip(feature.properties.name);
-                }
-                
-                layer.on('click', function(e) {
-                    window.pyodide.runPython(`
-                        from js import event
-                        from pyscript.views.map_view import MapView
-                        MapView.on_feature_click(event, ${JSON.stringify(feature)})
-                    `);
-                    
-                    // Stop click event from propagating to the map
-                    L.DomEvent.stopPropagation(e);
-                });
-            }
-            """
-
-            # Create the GeoJSON layer with our custom functions
-            layer = js.L.geoJSON(geo_objects, {
-                "style": js.eval(style_function),
-                "pointToLayer": js.eval(point_to_layer),
-                "onEachFeature": js.eval(on_each_feature)
-            })
-
-            # Add the layer to the map
+            # Добавляем слой на карту
             layer.addTo(self.map)
 
-            # Store the layer
+            # Сохраняем слой
             self.layers['main'] = layer
 
-            # Fit the map to the layer bounds
-            bounds = layer.getBounds()
-            if bounds.isValid():
-                self.map.fitBounds(bounds)
+            # Устанавливаем границы карты только если не нужно сохранять зум
+            if not preserve_zoom:
+                try:
+                    bounds = layer.getBounds()
+                    if bounds and hasattr(bounds, 'isValid') and bounds.isValid():
+                        self.map.fitBounds(bounds)
+                except Exception as e:
+                    print(f"Could not fit map to bounds: {e}")
+            else:
+                # Восстанавливаем зум и центр, если они были сохранены
+                if 'current_zoom' in locals() and 'current_center' in locals():
+                    try:
+                        self.map.setView([current_center.lat, current_center.lng], current_zoom)
+                    except Exception as e:
+                        print(f"Error restoring zoom and center: {e}")
+
+            print("GeoJSON layer updated successfully")
 
         except Exception as e:
-            print(f"Error creating GeoJSON layer: {str(e)}")
+            import traceback
+            print(f"Error updating geo layers: {str(e)}")
+            print(traceback.format_exc())
 
-    def highlight_selected_object(self, selected_object):
+    def feature_interaction_handler(self, feature, layer):
+        """
+        Handle interactions for each feature.
+
+        Args:
+            feature: The feature to attach events
+            layer: The Leaflet layer
+        """
+        # Example setup for click interaction:
+        layer.on("click", lambda e: GeoActions.select_geo_object(feature))
+
+    def highlight_selected_object(self, selected_object, preserve_zoom=False):
         """
         Highlight the selected object on the map
-        
+
         Args:
             selected_object: GeoJSON Feature to highlight
+            preserve_zoom: Whether to preserve current zoom level
         """
         # Clear previous selection
         self.clear_selection()
+
+        # Сохраняем текущий зум и центр, если нужно
+        if preserve_zoom and self.map:
+            current_zoom = self.map.getZoom()
+            current_center = self.map.getCenter()
 
         try:
             # Parse the object if it's a string
@@ -299,10 +357,18 @@ class MapView:
             self.selected_layer.addTo(self.map)
             self.selected_layer.bringToFront()
 
-            # Center the map on the selected object
-            bounds = self.selected_layer.getBounds()
-            if bounds.isValid():
-                self.map.fitBounds(bounds, {"padding": [50, 50]})
+            # Если не нужно сохранять зум, центрируем карту на выделенном объекте
+            if not preserve_zoom:
+                bounds = self.selected_layer.getBounds()
+                if bounds.isValid():
+                    self.map.fitBounds(bounds, {"padding": [50, 50]})
+            else:
+                # Восстанавливаем зум и центр, если они были сохранены
+                if 'current_zoom' in locals() and 'current_center' in locals():
+                    try:
+                        self.map.setView([current_center.lat, current_center.lng], current_zoom)
+                    except Exception as e:
+                        print(f"Error restoring zoom and center: {e}")
 
         except Exception as e:
             print(f"Error highlighting selected object: {str(e)}")
@@ -310,16 +376,23 @@ class MapView:
     def clear_selection(self):
         """Clear the currently selected object"""
         if self.selected_layer:
-            self.map.removeLayer(self.selected_layer)
+            try:
+                self.map.removeLayer(self.selected_layer)
+            except Exception as e:
+                print(f"Error clearing selection: {e}")
             self.selected_layer = None
 
     def on_map_click(self, event):
         """
         Handle map click event
-        
+
         Args:
             event: Leaflet click event
         """
+        # Если карта обновляется программно, игнорируем пользовательские клики
+        if self._updating_map:
+            return
+
         # Close popup if open
         if self.popup:
             self.map.closePopup(self.popup)
@@ -328,50 +401,58 @@ class MapView:
         # Clear selected object
         self.store.update_state({"selected_object": None})
 
-    @staticmethod
-    def on_feature_click(event, feature):
-        """
-        Handle feature click event (static method called from JavaScript)
-        
-        Args:
-            event: Leaflet click event
-            feature: GeoJSON Feature
-        """
-        # Select the clicked object
-        GeoActions.select_geo_object(feature)
-
     def on_map_zoom(self, event):
         """
         Handle map zoom event
-        
+
         Args:
             event: Leaflet zoom event
         """
-        # Update map zoom in the store
-        GeoActions.update_map_view(
-            self.map.getCenter(),
-            self.map.getZoom()
-        )
+        # Если карта обновляется программно, не реагируем на события
+
+        if self._updating_map:
+            print("Ignoring zoom event during programmatic update")
+            return
+
+            # Получаем центр и зум
+            center = self.map.getCenter()
+            zoom = self.map.getZoom()
+            # Устанавливаем флаг для предотвращения циклических обновлений
+            self._updating_map = True
+            try:
+                # Update map zoom in the store
+                CityActions.update_map_view(
+                    [center.lat, center.lng],
+                    zoom
+                )
+            finally:
+                # Сбрасываем флаг
+                self._updating_map = False
 
     def on_map_move(self, event):
         """
         Handle map move event
-        
+
         Args:
             event: Leaflet move event
         """
-        # Update map center in the store
-        GeoActions.update_map_view(
-            self.map.getCenter(),
-            self.map.getZoom()
-        )
+        # Если карта обновляется программно, не реагируем на события
 
-    def cleanup(self):
-        """Clean up the component and unsubscribe from the store"""
-        if self.unsubscribe:
-            self.unsubscribe()
+        if self._updating_map:
+            print("Ignoring move event during programmatic update")
+            return
 
-        # Clean up the map
-        if self.map:
-            self.map.remove()
-            self.map = None
+        # Получаем центр и зум
+        center = self.map.getCenter()
+        zoom = self.map.getZoom()
+        # Устанавливаем флаг для предотвращения циклических обновлений
+        self._updating_map = True
+        try:
+            # Update map center in the store
+            CityActions.update_map_view(
+                [center.lat, center.lng],
+                zoom
+            )
+        finally:
+            # Сбрасываем флаг
+            self._updating_map = False
