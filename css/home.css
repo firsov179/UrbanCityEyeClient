@@ -286,6 +286,7 @@
     }
 
     .map-title {
+        visibility: hidden;
         font-size: 18px;
     }
 
