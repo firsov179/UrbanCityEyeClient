@@ -70,12 +70,15 @@ class SimulationView:
         navigate_to_simulation = state.get("navigate_to_simulation", False)
 
         if navigate_to_simulation and self.initialized:
-            self._initialize_simulation(navigate_to_simulation)
-
-            # Reset the navigation flag
+            js.console.log(f"Processing navigation to simulation: {navigate_to_simulation}")
+            
+            # Сначала сбрасываем флаг навигации, чтобы предотвратить повторную инициализацию
             from ..dispatch.dispatcher import Dispatcher
             dispatcher = Dispatcher()
             dispatcher.dispatch("RESET_NAVIGATION", None)
+            
+            # Затем инициализируем симуляцию
+            self._initialize_simulation(navigate_to_simulation)
 
     def _initialize_simulation(self, navigation_data):
         """
@@ -86,37 +89,48 @@ class SimulationView:
         """
         js.console.log(f"Initializing simulation with data: {navigation_data}")
 
-        # Extract city_id and mode_id
-        city_id = navigation_data.get("city_id")
-        mode_id = navigation_data.get("mode_id", 1)  # Default to transport mode
-
-        if not city_id:
-            js.console.log("No city_id provided for simulation initialization")
+        # Static variable to prevent re-initialization
+        if not hasattr(self, "_initialization_in_progress"):
+            self._initialization_in_progress = True
+        else:
+            js.console.log("Initialization already in progress, skipping")
             return
 
-        # Initialize sub-components if they haven't been initialized
-        if self.map_view and not getattr(self.map_view, '_initialized', False):
-            js.console.log("Initializing MapView")
-            self.map_view.initialize()
+        try:
+            # Extract city_id and mode_id
+            city_id = navigation_data.get("city_id")
+            mode_id = navigation_data.get("mode_id", 1)  # Default to transport mode
 
-        if self.timeline and not getattr(self.timeline, '_initialized', False):
-            js.console.log("Initializing Timeline")
-            self.timeline.initialize()
+            if not city_id:
+                js.console.log("No city_id provided for simulation initialization")
+                return
 
-        if self.info_panel and not getattr(self.info_panel, '_initialized', False):
-            js.console.log("Initializing InfoPanel")
-            self.info_panel.initialize()
+            # Initialize sub-components if they haven't been initialized
+            if self.map_view and not getattr(self.map_view, '_initialized', False):
+                js.console.log("Initializing MapView")
+                self.map_view.initialize()
 
-        # Update mode in store if provided
-        if mode_id:
-            from ..dispatch.dispatcher import Dispatcher
-            dispatcher = Dispatcher()
-            dispatcher.dispatch("SELECT_MODE", mode_id)
+            if self.timeline and not getattr(self.timeline, '_initialized', False):
+                js.console.log("Initializing Timeline")
+                self.timeline.initialize()
 
-            # Update the UI to reflect the selected mode
-            self._update_mode_ui(mode_id)
+            if self.info_panel and not getattr(self.info_panel, '_initialized', False):
+                js.console.log("Initializing InfoPanel")
+                self.info_panel.initialize()
 
-        js.console.log(f"Simulation initialization complete for city_id: {city_id}, mode_id: {mode_id}")
+            # Update mode in store if provided
+            if mode_id:
+                from ..dispatch.dispatcher import Dispatcher
+                dispatcher = Dispatcher()
+                dispatcher.dispatch("SELECT_MODE", mode_id)
+
+                # Update the UI to reflect the selected mode
+                self._update_mode_ui(mode_id)
+
+            js.console.log(f"Simulation initialization complete for city_id: {city_id}, mode_id: {mode_id}")
+        finally:
+            # Clear initialization flag
+            self._initialization_in_progress = False
 
     def _update_mode_ui(self, mode_id):
         """

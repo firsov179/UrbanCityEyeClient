@@ -32,11 +32,17 @@ class CityActions:
             city_id: ID of the selected city
             mode_id: ID of the selected mode (1=Transport, 2=Housing)
         """
-        dispatcher = Dispatcher()
-        dispatcher.dispatch("NAVIGATE_TO_SIMULATION", {
-            "city_id": city_id,
-            "mode_id": mode_id
-        })
+        from ..store.app_store import AppStore
+        store = AppStore()
+        state = store.get_state()
+        current_view = state.get("current_view")
+    
+        if current_view != "simulation":
+            dispatcher = Dispatcher()
+            dispatcher.dispatch("NAVIGATE_TO_SIMULATION", {
+                "city_id": city_id,
+                "mode_id": mode_id
+            })
 
     @staticmethod
     def navigate_to_home():
