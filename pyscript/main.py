@@ -1,5 +1,5 @@
 """
-Main entry point for the PyScript City Infrastructure Evolution application.
+Main entry point for the PyScript Urban City Eye application.
 Initializes all components and sets up the application.
 """
 import js
@@ -65,7 +65,7 @@ async def initialize_app():
         log("App already initialized, skipping initialization")
         return
 
-    log("Initializing City Infrastructure Evolution Application")
+    log("Initializing Urban City Eye Application")
 
     # Устанавливаем флаг инициализации
     app_initialized = True
@@ -287,7 +287,7 @@ async def main():
         # Register cleanup function to be called on window unload
         js.window.addEventListener("unload", create_proxy(cleanup))
 
-        log("City Infrastructure Evolution Application is ready")
+        log("Urban City Eye Application is ready")
     except Exception as e:
         log(f"Error in main: {str(e)}")
 
