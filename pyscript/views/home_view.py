@@ -159,6 +159,10 @@ class HomeView:
             marker.appendChild(label)
             self.markers_container.appendChild(marker)
 
+            # Add marker to map
+            if self.selected_city_id == city_id:
+                marker.classList.add("active")
+
             # Save reference
             self.city_markers[city_id] = marker
 
