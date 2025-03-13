@@ -29,7 +29,7 @@ class Timeline:
     def initialize(self):
         """Initialize the component and subscribe to store updates"""
         if self.container is None:
-            print(f"Warning: Container {self.container_id} not found in DOM")
+            js.console.log(f"Warning: Container {self.container_id} not found in DOM")
             return
 
         # Subscribe to store changes

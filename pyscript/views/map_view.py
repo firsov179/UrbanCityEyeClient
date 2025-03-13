@@ -34,7 +34,7 @@ class MapView:
     def initialize(self):
         """Initialize the component, create the map and subscribe to store updates"""
         if self.container is None:
-            print(f"Warning: Container {self.container_id} not found in the DOM")
+            js.console.log(f"Warning: Container {self.container_id} not found in the DOM")
             return
 
         # Initialize the Leaflet map
@@ -54,7 +54,7 @@ class MapView:
                 self.map.off(event_name, handler)
                 handler.destroy()
             except Exception as e:
-                print(f"Error removing {event_name} handler: {e}")
+                js.console.log(f"Error removing {event_name} handler: {e}")
 
         # Clear the handler dictionary
         self._proxy_handlers = {}
@@ -77,26 +77,26 @@ class MapView:
         try:
             # Check if the container exists
             if not self.container:
-                print(f"Error: Map container '{self.container_id}' not found in DOM")
+                js.console.log(f"Error: Map container '{self.container_id}' not found in DOM")
                 return
 
             # Remove existing map if it exists
             if self.map:
-                print("Removing existing map instance")
+                js.console.log("Removing existing map instance")
                 self._clear_event_handlers()
                 try:
                     self.map.remove()
                 except Exception as e:
-                    print(f"Error removing old map: {e}")
+                    js.console.log(f"Error removing old map: {e}")
                 self.map = None
 
             # Ensure valid center coordinates
             if not MAP_DEFAULT_CENTER or len(MAP_DEFAULT_CENTER) != 2:
                 center = [51.5074, -0.1278]  # Default London coordinates
-                print(f"Using default center: {center}")
+                js.console.log(f"Using default center: {center}")
             else:
                 center = MAP_DEFAULT_CENTER
-                print(f"Using configured center: {center}")
+                js.console.log(f"Using configured center: {center}")
 
             # Create Leaflet LatLng object for center
             center_obj = js.L.latLng(center[0], center[1])
@@ -104,7 +104,7 @@ class MapView:
             # Ensure valid zoom
             zoom = MAP_DEFAULT_ZOOM if isinstance(MAP_DEFAULT_ZOOM, int) else 13
 
-            print(f"Creating map with center: {center}, zoom: {zoom}")
+            js.console.log(f"Creating map with center: {center}, zoom: {zoom}")
             self.map = js.L.map(self.container_id).setView(center_obj, zoom)
 
             # Add tile layer
@@ -125,29 +125,29 @@ class MapView:
             # Add event handlers with proxy preservation
             self._setup_event_handlers()
 
-            print("Map created successfully")
+            js.console.log("Map created successfully")
 
         except Exception as e:
             import traceback
-            print(f"Error creating map: {str(e)}")
-            print(traceback.format_exc())
+            js.console.log(f"Error creating map: {str(e)}")
+            js.console.log(traceback.format_exc())
 
     def cleanup(self):
         """Clean up resources when the component is destroyed"""
-        print("Cleaning up MapView resources")
+        js.console.log("Cleaning up MapView resources")
 
         if self.unsubscribe:
             try:
                 self.unsubscribe()
                 self.unsubscribe = None
             except Exception as e:
-                print(f"Error during unsubscribe: {e}")
+                js.console.log(f"Error during unsubscribe: {e}")
 
         if hasattr(self, '_state_change_handler'):
             try:
                 self._state_change_handler.destroy()
             except Exception as e:
-                print(f"Error destroying state change handler: {e}")
+                js.console.log(f"Error destroying state change handler: {e}")
 
         self._clear_event_handlers()
 
@@ -156,7 +156,7 @@ class MapView:
                 self.map.remove()
                 self.map = None
             except Exception as e:
-                print(f"Error removing map: {e}")
+                js.console.log(f"Error removing map: {e}")
 
     def on_state_change(self, state):
         """
@@ -167,7 +167,7 @@ class MapView:
         """
         # Если карта обновляется программно, не реагируем на изменения состояния
         if self._updating_map:
-            print("Skipping state update while map is being programmatically updated")
+            js.console.log("Skipping state update while map is being programmatically updated")
             return
 
         # Проверка на наличие новых гео-объектов
@@ -216,7 +216,7 @@ class MapView:
                 center_lng_changed = abs(current_center.lng - map_center[1]) > 0.0001
                 zoom_changed = map_zoom is not None and current_zoom != map_zoom
             except Exception as e:
-                print(f"Error comparing map coordinates: {e}")
+                js.console.log(f"Error comparing map coordinates: {e}")
                 center_lat_changed = True
                 center_lng_changed = True
                 zoom_changed = map_zoom is not None
@@ -229,9 +229,9 @@ class MapView:
                     # Используем только валидные координаты
                     new_zoom = map_zoom if map_zoom is not None else current_zoom
                     self.map.setView([map_center[0], map_center[1]], new_zoom)
-                    print(f"Updated map view to center: {map_center}, zoom: {new_zoom}")
+                    js.console.log(f"Updated map view to center: {map_center}, zoom: {new_zoom}")
                 except Exception as e:
-                    print(f"Error updating map view: {e}")
+                    js.console.log(f"Error updating map view: {e}")
                 finally:
                     # Сбрасываем флаг
                     self._updating_map = False
@@ -255,7 +255,7 @@ class MapView:
                 try:
                     self.map.removeLayer(self.layers['main'])
                 except Exception as e:
-                    print(f"Error removing existing layer: {e}")
+                    js.console.log(f"Error removing existing layer: {e}")
                 self.layers['main'] = None
 
             # Конвертируем geo_objects в строку JSON, затем в JavaScript объект
@@ -293,21 +293,21 @@ class MapView:
                     if bounds and hasattr(bounds, 'isValid') and bounds.isValid():
                         self.map.fitBounds(bounds)
                 except Exception as e:
-                    print(f"Could not fit map to bounds: {e}")
+                    js.console.log(f"Could not fit map to bounds: {e}")
             else:
                 # Восстанавливаем зум и центр, если они были сохранены
                 if 'current_zoom' in locals() and 'current_center' in locals():
                     try:
                         self.map.setView([current_center.lat, current_center.lng], current_zoom)
                     except Exception as e:
-                        print(f"Error restoring zoom and center: {e}")
+                        js.console.log(f"Error restoring zoom and center: {e}")
 
-            print("GeoJSON layer updated successfully")
+            js.console.log("GeoJSON layer updated successfully")
 
         except Exception as e:
             import traceback
-            print(f"Error updating geo layers: {str(e)}")
-            print(traceback.format_exc())
+            js.console.log(f"Error updating geo layers: {str(e)}")
+            js.console.log(traceback.format_exc())
 
     def feature_interaction_handler(self, feature, layer):
         """
@@ -368,10 +368,10 @@ class MapView:
                     try:
                         self.map.setView([current_center.lat, current_center.lng], current_zoom)
                     except Exception as e:
-                        print(f"Error restoring zoom and center: {e}")
+                        js.console.log(f"Error restoring zoom and center: {e}")
 
         except Exception as e:
-            print(f"Error highlighting selected object: {str(e)}")
+            js.console.log(f"Error highlighting selected object: {str(e)}")
 
     def clear_selection(self):
         """Clear the currently selected object"""
@@ -379,7 +379,7 @@ class MapView:
             try:
                 self.map.removeLayer(self.selected_layer)
             except Exception as e:
-                print(f"Error clearing selection: {e}")
+                js.console.log(f"Error clearing selection: {e}")
             self.selected_layer = None
 
     def on_map_click(self, event):
@@ -411,7 +411,7 @@ class MapView:
         # Если карта обновляется программно, не реагируем на события
 
         if self._updating_map:
-            print("Ignoring zoom event during programmatic update")
+            js.console.log("Ignoring zoom event during programmatic update")
             return
 
             # Получаем центр и зум
@@ -439,7 +439,7 @@ class MapView:
         # Если карта обновляется программно, не реагируем на события
 
         if self._updating_map:
-            print("Ignoring move event during programmatic update")
+            js.console.log("Ignoring move event during programmatic update")
             return
 
         # Получаем центр и зум

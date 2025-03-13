@@ -12,8 +12,11 @@ MAP_DEFAULT_ZOOM = 13
 MAP_TILE_LAYER = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
 MAP_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 
-# UI Configuration
-DEFAULT_CITY_ID = 1  # London
-DEFAULT_YEAR = 2000
-MAX_INFO_PANEL_ITEMS = 10
-TIMELINE_STEP = 5  # Years between timeline markers
+# City Positions (for home screen map)
+CITY_POSITIONS = {
+    "London": {"left": "40%", "top": "40%"},
+    "Paris": {"left": "45%", "top": "45%"},
+    "Moscow": {"left": "60%", "top": "30%"},
+    "Rome": {"left": "50%", "top": "55%"},
+    "Saint Petersburg": {"left": "55%", "top": "25%"}
+}

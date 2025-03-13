@@ -38,12 +38,12 @@ class APIClient:
             )
 
             if response.status >= 400:
-                print(f"API Error ({response.status}): {await response.text()}")
+                js.console.log(f"API Error ({response.status}): {await response.text()}")
                 return None
 
             return await response.json()
         except Exception as e:
-            print(f"API Request Failed: {str(e)}")
+            js.console.log(f"API Request Failed: {str(e)}")
             return None
 
     @staticmethod
@@ -70,10 +70,10 @@ class APIClient:
             )
 
             if response.status >= 400:
-                print(f"API Error ({response.status}): {await response.text()}")
+                js.console.log(f"API Error ({response.status}): {await response.text()}")
                 return None
 
             return await response.json()
         except Exception as e:
-            print(f"API Request Failed: {str(e)}")
+            js.console.log(f"API Request Failed: {str(e)}")
             return None

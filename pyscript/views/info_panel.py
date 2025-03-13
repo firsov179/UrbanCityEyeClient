@@ -31,7 +31,7 @@ class InfoPanel:
     def initialize(self):
         """Initialize the component and subscribe to store updates"""
         if self.panel is None or self.content is None:
-            print(f"Warning: Panel elements not found in the DOM")
+            js.console.log(f"Warning: Panel elements not found in the DOM")
             return
 
         # Subscribe to store changes
@@ -344,7 +344,7 @@ class InfoPanel:
             js.URL.revokeObjectURL(url)
 
         except Exception as e:
-            print(f"Error exporting feature: {str(e)}")
+            js.console.log(f"Error exporting feature: {str(e)}")
 
     def on_close_panel(self, event):
         """Handle close panel button click"""

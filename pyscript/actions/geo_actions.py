@@ -88,7 +88,7 @@ class GeoActions:
                 if center:
                     dispatcher.dispatch("SET_MAP_VIEW", {"center": center})
             except Exception as e:
-                print(f"Error centering map on object: {str(e)}")
+                js.console.log(f"Error centering map on object: {str(e)}")
 
     @staticmethod
     def get_geometry_center(geometry):
@@ -150,7 +150,7 @@ class GeoActions:
                     return [lng_sum / len(points), lat_sum / len(points)]
 
         except Exception as e:
-            print(f"Error calculating geometry center: {str(e)}")
+            js.console.log(f"Error calculating geometry center: {str(e)}")
 
         return None
 
@@ -424,9 +424,9 @@ class GeoActions:
                 return "\n".join(csv_rows)
 
             else:
-                print(f"Unsupported export format: {format}")
+                js.console.log(f"Unsupported export format: {format}")
                 return None
 
         except Exception as e:
-            print(f"Error exporting geo data: {str(e)}")
+            js.console.log(f"Error exporting geo data: {str(e)}")
             return None

@@ -9,6 +9,37 @@ from ..dispatch.dispatcher import Dispatcher
 class CityActions:
     """Actions for managing cities"""
 
+    def navigate_to_simulation(city_id, mode_id=1):
+        """
+        Navigate to simulation screen
+
+        Args:
+            city_id: ID of the selected city
+            mode_id: ID of the selected mode (1=Transport, 2=Housing)
+        """
+        dispatcher = Dispatcher()
+        dispatcher.dispatch("NAVIGATE_TO_SIMULATION", {
+            "city_id": city_id,
+            "mode_id": mode_id
+        })
+
+    @staticmethod
+    def navigate_to_home():
+        """Navigate back to home screen"""
+        dispatcher = Dispatcher()
+        dispatcher.dispatch("NAVIGATE_TO_HOME")
+
+    @staticmethod
+    def select_mode(mode_id):
+        """
+        Select a simulation mode
+
+        Args:
+            mode_id: ID of the mode to select (1=Transport, 2=Housing)
+        """
+        dispatcher = Dispatcher()
+        dispatcher.dispatch("SELECT_MODE", mode_id)
+
     @staticmethod
     async def fetch_cities():
         """

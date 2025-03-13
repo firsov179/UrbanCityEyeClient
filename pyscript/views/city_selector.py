@@ -25,7 +25,7 @@ class CitySelector:
     def initialize(self):
         """Initialize the component and subscribe to store updates"""
         if self.container is None:
-            print(f"Warning: Container {self.container_id} not found in the DOM")
+            js.console.log(f"Warning: Container {self.container_id} not found in the DOM")
             return
 
         # Fetch cities when initializing
