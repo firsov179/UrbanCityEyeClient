@@ -72,7 +72,21 @@ class HomeView:
 
     def _on_window_resize(self, event):
         """Handle window resize event"""
-        # Rerenders the city markers to adapt to new window size
+        # Update all marker positions when window is resized
+        for city_id, marker in self.city_markers.items():
+            # Find the city data
+            city = next((c for c in self.cities if c.get("id") == city_id), None)
+            if not city:
+                continue
+                
+            city_name = city.get("name")
+            # Get position from config
+            from ..config import CITY_POSITIONS
+            if city_name in CITY_POSITIONS:
+                position = CITY_POSITIONS.get(city_name)
+                # Update marker position
+                self._update_marker_position(marker, position)
+        # Also update city selection highlight
         self._update_city_selection()
 
     def _setup_event_handlers(self):
@@ -122,7 +136,7 @@ class HomeView:
             self._update_start_button()
 
     def _render_city_markers(self):
-        """Render markers for all cities on the map"""
+        """Render markers for all cities on the map with dynamic positioning"""
         # Clear existing markers
         self.markers_container.innerHTML = ""
         self.city_markers = {}
@@ -144,10 +158,11 @@ class HomeView:
             marker.className = "city-marker"
             marker.setAttribute("data-city-id", str(city_id))
 
-            # Set position in percentage
+            # Set position in percentage based on the map's actual display area
             position = CITY_POSITIONS.get(city_name, {"left": 50, "top": 50})
-            marker.style.left = f"{position['left']}%"
-            marker.style.top = f"{position['top']}%"
+            
+            # Get the actual dimensions of the map
+            self._update_marker_position(marker, position)
 
             # Create label
             label = js.document.createElement("div")
@@ -169,6 +184,65 @@ class HomeView:
 
             # Save reference
             self.city_markers[city_id] = marker
+
+    def _update_marker_position(self, marker, position):
+        """
+        Update marker position based on the actual map display area
+        
+        Args:
+            marker: The DOM element for the marker
+            position: Original position info with 'left' and 'top' in percentages
+        """
+        map_inner = js.document.querySelector('.map-inner')
+        if not map_inner:
+            # Fallback to direct percentage if we can't calculate
+            marker.style.left = f"{position['left']}%"
+            marker.style.top = f"{position['top']}%"
+            return
+        
+        # Get the computed style of the map container
+        computed_style = js.window.getComputedStyle(map_inner)
+        
+        # Get the actual map dimensions (including any padding)
+        map_rect = map_inner.getBoundingClientRect()
+        container_width = map_rect.width
+        container_height = map_rect.height
+        
+        # Calculate the actual area occupied by the map image
+        # This is important because 'background-size: contain' can leave empty space
+        orig_width = 2328  # Original SVG width
+        orig_height = 1886  # Original SVG height
+        aspect_ratio = orig_width / orig_height
+        
+        if container_width / container_height > aspect_ratio:
+            # Map is height-constrained (empty space on sides)
+            actual_height = container_height
+            actual_width = actual_height * aspect_ratio
+            h_offset = (container_width - actual_width) / 2
+            v_offset = 0
+        else:
+            # Map is width-constrained (empty space on top/bottom)
+            actual_width = container_width
+            actual_height = actual_width / aspect_ratio
+            h_offset = 0
+            v_offset = (container_height - actual_height) / 2
+        
+        # Calculate pixel positions relative to the map
+        x_percent = position['left']
+        y_percent = position['top']
+        
+        # Adjust for the actual map area within the container
+        adjusted_left = h_offset + (x_percent / 100 * actual_width)
+        adjusted_top = v_offset + (y_percent / 100 * actual_height)
+        
+        # Convert back to percentages relative to the container
+        final_left = (adjusted_left / container_width) * 100
+        final_top = (adjusted_top / container_height) * 100
+        
+        # Apply the calculated position
+        marker.style.left = f"{final_left}%"
+        marker.style.top = f"{final_top}%"
+
 
     def _update_city_selection(self):
         """Update visual selection of cities on the map"""

@@ -28,14 +28,14 @@
 
 .map-wrapper {
     position: relative;
-    width: 90%; /* Занимает не всю ширину контейнера */
-    height: 90%; /* Занимает не всю высоту контейнера */
+    width: 90%;
+    height: 90%;
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: #e6ecff; /* Цвет фона для карты */
-    border-radius: 10px; /* Скругленные углы */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Небольшая тень */
+    background-color: #e6ecff;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     overflow: hidden;
 }
 
@@ -44,28 +44,24 @@
     width: 85%;
     height: 85%;
     max-width: 1200px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.map-image {
-    position: absolute;
-    width: 100%;
-    height: 100%;
+    aspect-ratio: 2328/1886;
     background-image: url('../images/europe-map.svg');
     background-size: contain;
     background-position: center;
     background-repeat: no-repeat;
-    aspect-ratio: 2328/1886;
 }
 
-/* Контейнер для маркеров городов, привязанный к карте */
 #city-markers-container {
     position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     width: 100%;
     height: 100%;
     pointer-events: none;
+    background-size: contain;
+    background-position: center;
     z-index: 10;
 }
 
