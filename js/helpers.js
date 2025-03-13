@@ -21,8 +21,6 @@ window.mapInstance = null;
 
 // Handle screen changes
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('DOM fully loaded, waiting for PyScript to initialize...');
-
   // Add click handlers for navigation buttons if they exist
   const backButton = document.getElementById('back-to-home');
   if (backButton) {

@@ -228,7 +228,7 @@ class HomeView:
             event: DOM event
             city_id: ID of the clicked city
         """
-        # Select the city
+        # Только выбираем город без загрузки дополнительных данных
         CityActions.select_city(city_id)
 
     def _on_mode_select(self, event, mode_id):
@@ -251,10 +251,10 @@ class HomeView:
         # Update selected mode
         self.selected_mode_id = mode_id
 
-        # Update store
+        # Update store (только обновляем режим, не вызываем загрузку данных)
         from ..dispatch.dispatcher import Dispatcher
         dispatcher = Dispatcher()
-        dispatcher.dispatch("SELECT_MODE", mode_id)
+        dispatcher.dispatch("SELECT_MODE_HOME", mode_id)  # Используем другое действие
 
     def _on_start_simulation(self, event):
         """Handle start simulation button click"""
@@ -265,6 +265,10 @@ class HomeView:
         self.screen.classList.remove("active")
         simulation_screen = js.document.getElementById("simulation-screen")
         simulation_screen.classList.add("active")
+
+        # Здесь загружаем полные данные для симуляции
+        from ..actions.city_actions import CityActions
+        CityActions.select_city_simulation(self.selected_city_id)
 
         # Trigger simulation view initialization
         from ..dispatch.dispatcher import Dispatcher

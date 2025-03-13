@@ -10,6 +10,7 @@ from .geo_utils import (
     create_geojson_layer,
     parse_geojson
 )
+from logging import log, error, warn
 
 # Exports
 __all__ = [
@@ -17,6 +18,9 @@ __all__ = [
     'calculate_distance',
     'format_coordinates',
     'create_geojson_layer',
-    'parse_geojson'
+    'parse_geojson',
+    'log',
+    'error',
+    'warn'
 ]
 

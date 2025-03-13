@@ -4,10 +4,25 @@ Actions related to cities
 import asyncio
 from ..utils.api_client import APIClient
 from ..dispatch.dispatcher import Dispatcher
+from ..utils.logging import log, error
 
 
 class CityActions:
     """Actions for managing cities"""
+
+    @staticmethod
+    def select_city_simulation(city_id):
+        """
+        Select a city and load all related data for simulation
+
+        Args:
+            city_id: ID of the city to select
+        """
+        dispatcher = Dispatcher()
+        dispatcher.dispatch("SELECT_CITY", city_id)
+
+        # Загружаем дополнительные данные для симуляции
+        asyncio.ensure_future(CityActions.fetch_available_years(city_id))
 
     def navigate_to_simulation(city_id, mode_id=1):
         """
@@ -48,15 +63,18 @@ class CityActions:
         Returns:
             List of cities or None if the request fails
         """
+        log("Fetching cities...")
         dispatcher = Dispatcher()
         dispatcher.dispatch("CITIES_REQUEST")
 
         response = await APIClient.get("cities/")
 
         if response:
+            log(f"Received {len(response)} cities")
             dispatcher.dispatch("SET_CITIES", response)
             return response
         else:
+            error("Failed to fetch cities")
             dispatcher.dispatch("API_ERROR", "Failed to fetch cities")
             return None
 
@@ -64,15 +82,24 @@ class CityActions:
     def select_city(city_id):
         """
         Select a city
-        
+
         Args:
             city_id: ID of the city to select
         """
+        from ..store.app_store import AppStore
+        store = AppStore()
+        state = store.get_state()
+
+        # Проверяем текущий экран
+        current_view = state.get("current_view", "home")
+
         dispatcher = Dispatcher()
         dispatcher.dispatch("SELECT_CITY", city_id)
 
-        # After selecting a city, fetch available years
-        asyncio.ensure_future(CityActions.fetch_available_years(city_id))
+        # Загружаем дополнительные данные только если находимся на экране симуляции
+        if current_view == "simulation":
+            # After selecting a city, fetch available years
+            asyncio.ensure_future(CityActions.fetch_available_years(city_id))
 
     @staticmethod
     async def fetch_available_years(city_id):

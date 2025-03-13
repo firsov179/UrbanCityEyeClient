@@ -5,6 +5,7 @@ import js
 from pyodide.ffi import create_proxy
 from ..store.app_store import AppStore
 from ..actions.city_actions import CityActions
+from ..utils.logging import warn
 
 
 class CitySelector:
@@ -25,7 +26,7 @@ class CitySelector:
     def initialize(self):
         """Initialize the component and subscribe to store updates"""
         if self.container is None:
-            js.console.log(f"Warning: Container {self.container_id} not found in the DOM")
+            warn(f"Warning: Container {self.container_id} not found in the DOM")
             return
 
         # Fetch cities when initializing

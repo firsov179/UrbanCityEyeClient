@@ -23,31 +23,32 @@
 
     <!-- PyScript конфигурация -->
     <py-config type="toml">
-    packages = ["requests", "numpy", "pandas"]
+        trminal = false
 
-    [[fetch]]
-    files = [
-        "./pyscript/actions/__init__.py",
-        "./pyscript/actions/city_actions.py",
-        "./pyscript/actions/simulation_actions.py",
-        "./pyscript/actions/geo_actions.py",
-        "./pyscript/store/__init__.py",
-        "./pyscript/store/app_store.py",
-        "./pyscript/dispatch/__init__.py",
-        "./pyscript/dispatch/dispatcher.py",
-        "./pyscript/views/__init__.py",
-        "./pyscript/views/city_selector.py",
-        "./pyscript/views/timeline.py",
-        "./pyscript/views/map_view.py",
-        "./pyscript/views/info_panel.py",
-        "./pyscript/views/home_view.py",
-        "./pyscript/views/simulation_view.py",
-        "./pyscript/utils/__init__.py",
-        "./pyscript/utils/api_client.py",
-        "./pyscript/utils/geo_utils.py",
-        "./pyscript/config.py",
-        "./pyscript/main.py"
-    ]
+        [[fetch]]
+        files = [
+            "./pyscript/actions/__init__.py",
+            "./pyscript/actions/city_actions.py",
+            "./pyscript/actions/simulation_actions.py",
+            "./pyscript/actions/geo_actions.py",
+            "./pyscript/store/__init__.py",
+            "./pyscript/store/app_store.py",
+            "./pyscript/dispatch/__init__.py",
+            "./pyscript/dispatch/dispatcher.py",
+            "./pyscript/views/__init__.py",
+            "./pyscript/views/city_selector.py",
+            "./pyscript/views/timeline.py",
+            "./pyscript/views/map_view.py",
+            "./pyscript/views/info_panel.py",
+            "./pyscript/views/home_view.py",
+            "./pyscript/views/simulation_view.py",
+            "./pyscript/utils/__init__.py",
+            "./pyscript/utils/api_client.py",
+            "./pyscript/utils/geo_utils.py",
+            "./pyscript/utils/logging.py",
+            "./pyscript/config.py",
+            "./pyscript/main.py"
+        ]
     </py-config>
 
     <style>

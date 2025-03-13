@@ -2,7 +2,7 @@
 Dispatcher for updating the store
 """
 from ..store.app_store import AppStore
-
+from ..utils.logging import log
 
 class Dispatcher:
     """
@@ -26,7 +26,7 @@ class Dispatcher:
             action_type: Type of action to dispatch
             payload: Data payload for the action
         """
-        js.console.log(f"Dispatching action: {action_type}")
+        log(f"Dispatching action: {action_type}")
 
         # Set loading state based on action type
         if action_type.endswith("_REQUEST"):
@@ -94,6 +94,13 @@ class Dispatcher:
                 "simulation": None,
                 "geo_objects": None,
                 "selected_object": None,
+                "loading": False
+            })
+
+        elif action_type == "SELECT_MODE_HOME":
+            # Просто обновляем режим без загрузки данных
+            self._store.update_state({
+                "selected_mode_id": payload,
                 "loading": False
             })
 

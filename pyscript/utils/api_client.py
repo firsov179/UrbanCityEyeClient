@@ -5,7 +5,7 @@ import json
 import asyncio
 from pyodide.http import pyfetch
 from ..config import API_BASE_URL, API_TIMEOUT
-
+from logging import *
 
 class APIClient:
     """Client for making API requests"""
@@ -38,12 +38,12 @@ class APIClient:
             )
 
             if response.status >= 400:
-                js.console.log(f"API Error ({response.status}): {await response.text()}")
+                error(f"API Error ({response.status}): {await response.text()}")
                 return None
 
             return await response.json()
         except Exception as e:
-            js.console.log(f"API Request Failed: {str(e)}")
+            error(f"API Request Failed: {str(e)}")
             return None
 
     @staticmethod
@@ -70,10 +70,10 @@ class APIClient:
             )
 
             if response.status >= 400:
-                js.console.log(f"API Error ({response.status}): {await response.text()}")
+                error(f"API Error ({response.status}): {await response.text()}")
                 return None
 
             return await response.json()
         except Exception as e:
-            js.console.log(f"API Request Failed: {str(e)}")
+            error(f"API Request Failed: {str(e)}")
             return None

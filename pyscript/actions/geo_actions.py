@@ -6,7 +6,7 @@ import json
 from ..utils.api_client import APIClient
 from ..dispatch.dispatcher import Dispatcher
 from ..utils.geo_utils import calculate_distance, parse_geojson
-
+from ..utils.logging import *
 
 class GeoActions:
     """Actions for managing geographic objects and spatial operations"""
@@ -88,7 +88,7 @@ class GeoActions:
                 if center:
                     dispatcher.dispatch("SET_MAP_VIEW", {"center": center})
             except Exception as e:
-                js.console.log(f"Error centering map on object: {str(e)}")
+                error(f"Error centering map on object: {str(e)}")
 
     @staticmethod
     def get_geometry_center(geometry):
@@ -150,7 +150,7 @@ class GeoActions:
                     return [lng_sum / len(points), lat_sum / len(points)]
 
         except Exception as e:
-            js.console.log(f"Error calculating geometry center: {str(e)}")
+            error(f"Error calculating geometry center: {str(e)}")
 
         return None
 
@@ -424,9 +424,9 @@ class GeoActions:
                 return "\n".join(csv_rows)
 
             else:
-                js.console.log(f"Unsupported export format: {format}")
+                error(f"Unsupported export format: {format}")
                 return None
 
         except Exception as e:
-            js.console.log(f"Error exporting geo data: {str(e)}")
+            error(f"Error exporting geo data: {str(e)}")
             return None

@@ -19,6 +19,7 @@ from pyscript.actions.city_actions import CityActions
 from pyscript.actions.simulation_actions import SimulationActions
 from pyscript.actions.geo_actions import GeoActions
 from pyscript.config import API_BASE_URL, MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM
+from pyscript.utils.logging import *
 
 # Global variables to hold view instances
 city_selector = None
@@ -61,10 +62,10 @@ async def initialize_app():
 
     # Проверяем, была ли уже выполнена инициализация
     if app_initialized:
-        js.console.log("App already initialized, skipping initialization")
+        log("App already initialized, skipping initialization")
         return
 
-    js.console.log("Initializing City Infrastructure Evolution Application")
+    log("Initializing City Infrastructure Evolution Application")
 
     # Устанавливаем флаг инициализации
     app_initialized = True
@@ -77,20 +78,22 @@ async def initialize_app():
     home_view = HomeView()
     simulation_view = SimulationView()
 
-    # Инициализируем компоненты основного интерфейса
-    # Они будут использоваться внутри SimulationView
-    city_selector = CitySelector()
-    timeline = Timeline()
-    map_view = MapView()
-    info_panel = InfoPanel()
+    # Проверяем наличие элементов для компонентов основного интерфейса
+    timeline_container = js.document.getElementById("timeline-container")
+    city_selector_container = js.document.getElementById("city-selector-container")
 
-    # Инициализация компонентов
+    # Инициализируем только те компоненты, для которых есть контейнеры
+    if timeline_container:
+        timeline = Timeline()
+        timeline.initialize()
+
+    if city_selector_container:
+        city_selector = CitySelector()
+        city_selector.initialize()
+
+    # Инициализация остальных компонентов
     home_view.initialize()
     simulation_view.initialize()
-
-    # Инициализация компонентов, которые могут быть использованы в simulation_view
-    city_selector.initialize()
-    timeline.initialize()
 
     # Register keyboard event listeners
     register_keyboard_events()
@@ -104,7 +107,7 @@ async def initialize_app():
     # Показываем начальный экран
     show_home_view()
 
-    js.console.log(f"Application initialized. API endpoint: {API_BASE_URL}")
+    log(f"Application initialized. API endpoint: {API_BASE_URL}")
 
 
 def show_home_view():
@@ -212,10 +215,13 @@ async def load_initial_data():
         cities = await CityActions.fetch_cities()
 
         if cities and len(cities) > 0:
-            js.console.log(f"Loaded {len(cities)} cities for the home view")
+            log(f"Loaded {len(cities)} cities for the home view")
         else:
-            js.console.log("No cities available. Please check your database connection.")
-    except Exception e:
+            log("No cities available. Please check your database connection.")
+    except Exception as e:
+        error(f"Error loading initial data: {e}")
+        import traceback
+        error(traceback.format_exc())
 
 
 
@@ -225,7 +231,7 @@ def handle_errors():
     def on_error(event):
         """Handle uncaught errors"""
         error_msg = f"An error occurred: {event.message}"
-        js.console.log(error_msg)
+        log(error_msg)
 
         # Dispatch error to store
         dispatcher = Dispatcher()
@@ -265,7 +271,7 @@ def cleanup():
     if info_panel:
         info_panel.cleanup()
 
-    js.console.log("Application cleanup completed")
+    log("Application cleanup completed")
 
 
 # Entry point
@@ -281,9 +287,9 @@ async def main():
         # Register cleanup function to be called on window unload
         js.window.addEventListener("unload", create_proxy(cleanup))
 
-        js.console.log("City Infrastructure Evolution Application is ready")
+        log("City Infrastructure Evolution Application is ready")
     except Exception as e:
-        js.console.log(f"Error in main: {str(e)}")
+        log(f"Error in main: {str(e)}")
 
 
 # Execute the main function if not already running
