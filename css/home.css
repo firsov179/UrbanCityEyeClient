@@ -3,6 +3,7 @@
     display: flex;
     height: 100vh;
     background-color: #f5f5f5;
+    overflow: hidden;
 }
 
 .home-title {
@@ -15,27 +16,48 @@
     z-index: 10;
 }
 
-/* Контейнер с картой Европы */
 #europe-map-container {
     flex: 1;
     position: relative;
-    background-image: url('../images/europe-map.svg');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    min-height: 100vh;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #e6f2ff;
 }
 
-/* Контейнер для маркеров городов */
+.map-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.map-inner {
+    position: relative;
+    width: 80%;
+    max-width: 1200px;
+    /* Сохраняем соотношение сторон 2328:1886 (примерно 1.234:1) */
+    aspect-ratio: 2328/1886;
+    background-image: url('../images/europe-map.svg');
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* Контейнер для маркеров городов, привязанный к карте */
 #city-markers-container {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
+    pointer-events: none; /* Чтобы маркеры получали клики */
 }
 
-/* Маркер города */
+/* Маркер города с абсолютным позиционированием */
 .city-marker {
     position: absolute;
     width: 16px;
@@ -46,6 +68,8 @@
     cursor: pointer;
     box-shadow: 0 0 8px rgba(0,0,0,0.3);
     transition: all 0.3s ease;
+    transform: translate(-50%, -50%); /* Центрирование точки */
+    pointer-events: auto; /* Включаем события клика */
 }
 
 .city-marker:hover, .city-marker.active {
@@ -190,7 +214,26 @@
     }
 
     #europe-map-container {
-        min-height: 50vh;
+        height: 50vh;
+    }
+
+    .map-inner {
+        width: 95%;
+    }
+
+    .city-marker {
+        width: 20px;
+        height: 20px;
+    }
+
+    .city-marker:hover, .city-marker.active {
+        width: 24px;
+        height: 24px;
+    }
+
+    .city-marker-label {
+        font-size: 14px;
+        padding: 3px 8px;
     }
 
     #home-info-panel {

@@ -5,8 +5,7 @@ import js
 from pyodide.ffi import create_proxy
 from ..store.app_store import AppStore
 from ..actions.city_actions import CityActions
-from ..config import CITY_POSITIONS
-
+from ..utils.logging import warn
 
 class HomeView:
     """Home view with city selection and mode selection"""
@@ -50,11 +49,15 @@ class HomeView:
     def initialize(self):
         """Initialize the component and load cities"""
         if not self.screen or not self.markers_container:
-            js.console.log(f"Warning: Required elements not found in the DOM")
+            warn(f"Warning: Required elements not found in the DOM")
             return
 
         # Set up event handlers
         self._setup_event_handlers()
+
+        # Add window resize handler
+        self._resize_handler = create_proxy(self._on_window_resize)
+        js.window.addEventListener("resize", self._resize_handler)
 
         # Subscribe to store changes
         self._state_change_handler = create_proxy(self.on_state_change)
@@ -62,6 +65,11 @@ class HomeView:
 
         # Fetch cities
         self._fetch_cities()
+
+    def _on_window_resize(self, event):
+        """Handle window resize event"""
+        # Rerenders the city markers to adapt to new window size
+        self._update_city_selection()
 
     def _setup_event_handlers(self):
         """Set up event handlers for UI elements"""
@@ -115,8 +123,8 @@ class HomeView:
         self.markers_container.innerHTML = ""
         self.city_markers = {}
 
-        # Create preset positions for the cities
-        city_positions = CITY_POSITIONS
+        # Import city positions from config
+        from ..config import CITY_POSITIONS
 
         # Add markers for each city
         for city in self.cities:
@@ -124,7 +132,7 @@ class HomeView:
             city_name = city.get("name")
 
             # Skip cities not in our preset positions
-            if city_name not in city_positions:
+            if city_name not in CITY_POSITIONS:
                 continue
 
             # Create marker
@@ -132,17 +140,15 @@ class HomeView:
             marker.className = "city-marker"
             marker.setAttribute("data-city-id", str(city_id))
 
-            # Set position
-            position = city_positions.get(city_name, {"left": "50%", "top": "50%"})
-            marker.style.left = position["left"]
-            marker.style.top = position["top"]
+            # Set position in percentage
+            position = CITY_POSITIONS.get(city_name, {"left": 50, "top": 50})
+            marker.style.left = f"{position['left']}%"
+            marker.style.top = f"{position['top']}%"
 
             # Create label
             label = js.document.createElement("div")
             label.className = "city-marker-label"
             label.textContent = city_name
-            label.style.left = "50%"
-            label.style.top = "0"
 
             # Add click handler
             handler = create_proxy(lambda event, city_id=city_id: self._on_city_click(event, city_id))
@@ -278,6 +284,7 @@ class HomeView:
             "mode_id": self.selected_mode_id
         })
 
+
     def show(self):
         """Show this view"""
         self.screen.classList.add("active")
@@ -297,4 +304,8 @@ class HomeView:
 
         if hasattr(self, '_state_change_handler'):
             self._state_change_handler.destroy()
+
+        if hasattr(self, '_resize_handler'):
+            js.window.removeEventListener("resize", self._resize_handler)
+            self._resize_handler.destroy()
 
