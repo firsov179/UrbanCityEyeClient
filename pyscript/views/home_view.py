@@ -29,7 +29,7 @@ class HomeView:
         self.screen_id = screen_id
         self.screen = js.document.getElementById(screen_id)
         self.markers_container_id = markers_container_id
-        self.markers_container = js.document.getElementById(markers_container_id)
+        self.markers_container = None
         self.info_title_id = info_title_id
         self.info_title = js.document.getElementById(info_title_id)
         self.info_content_id = info_content_id
@@ -50,6 +50,10 @@ class HomeView:
         """Initialize the component and load cities"""
         if not self.screen or not self.markers_container:
             warn(f"Warning: Required elements not found in the DOM")
+
+        self.markers_container = js.document.getElementById(self.markers_container_id)
+        if not self.markers_container:
+            print(f"Warning: Markers container {self.markers_container_id} not found in the DOM")
             return
 
         # Set up event handlers
