@@ -142,52 +142,56 @@
 }
 
 #city-info-title {
-     margin-top: 30px;
-     margin-bottom: 20px;
-   color: #2c3e50;
+    margin-top: 30px;
+    margin-bottom: 20px;
+    color: #2c3e50;
+    border-bottom: 1px solid #eee;
+    font-size: 24px;
  }
 
  #city-info-content {
-     flex: 1;
+    flex: 1;
  }
 
  .city-detail {
-     margin-bottom: 15px;
+    margin-bottom: 15px;
  }
 
  .city-detail-label {
-     font-weight: bold;
-     color: #7f8c8d;
-     margin-bottom: 5px;
+    font-weight: bold;
+    color: #7f8c8d;
+    margin-bottom: 5px;
  }
 
  .city-description {
-     margin-top: 20px;
-     line-height: 1.6;
+    margin-top: 20px;
+    line-height: 1.6;
  }
 
  /* Выбор режима моделирования */
  #mode-selection {
-     margin-top: 30px;
-     border-top: 1px solid #ecf0f1;
-     padding-top: 20px;
+    margin-top: 30px;
+    border-top: 1px solid #ecf0f1;
+    padding-top: 20px;
  }
 
  .mode-options {
-     display: flex;
-     flex-direction: column;
-     gap: 15px;
-     margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 15px;
  }
 
  .mode-option {
-     display: flex;
-     align-items: center;
-     padding: 12px 15px;
-     border: 2px solid #ecf0f1;
-     border-radius: 8px;
-     cursor: pointer;
-     transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    border: 2px solid #ecf0f1;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: #f5f5f5;
+    flex-direction: column;
  }
 
  .mode-option:hover {
@@ -242,6 +246,39 @@
      background-color: #bdc3c7;
      cursor: not-allowed;
  }
+
+ /* Стили для переключателя языка */
+.language-switcher {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    z-index: 100;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 5px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.lang-btn {
+    padding: 8px 12px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-weight: bold;
+    color: #333;
+    transition: all 0.3s ease;
+}
+
+.lang-btn.active {
+    background-color: #3498db;
+    color: white;
+}
+
+.lang-btn:hover:not(.active) {
+    background-color: #f1f1f1;
+}
+
 
 /* Адаптация для мобильных устройств */
 @media (max-width: 768px) {

@@ -4,6 +4,7 @@ Actions related to simulations and timeline functionality
 import asyncio
 from ..utils.api_client import APIClient
 from ..dispatch.dispatcher import Dispatcher
+from ..utils.logging import *
 
 
 class SimulationActions:
@@ -27,33 +28,6 @@ class SimulationActions:
             return response
         else:
             dispatcher.dispatch("API_ERROR", "Failed to fetch simulations")
-            return None
-
-    @staticmethod
-    async def fetch_simulation_by_id(simulation_id):
-        """
-        Fetch a specific simulation by ID
-        
-        Args:
-            simulation_id: ID of the simulation
-            
-        Returns:
-            Simulation data or None if the request fails
-        """
-        dispatcher = Dispatcher()
-        dispatcher.dispatch("SIMULATION_REQUEST")
-
-        response = await APIClient.get(f"simulations/{simulation_id}")
-
-        if response:
-            dispatcher.dispatch("SET_SIMULATION", response)
-
-            # After fetching simulation, get geo objects for this simulation
-            asyncio.ensure_future(SimulationActions.fetch_geo_objects(simulation_id))
-
-            return response
-        else:
-            dispatcher.dispatch("API_ERROR", f"Failed to fetch simulation {simulation_id}")
             return None
 
     @staticmethod

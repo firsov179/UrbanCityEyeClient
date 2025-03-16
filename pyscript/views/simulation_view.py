@@ -7,7 +7,9 @@ from ..store.app_store import AppStore
 from ..views.map_view import MapView
 from ..views.timeline import Timeline
 from ..views.info_panel import InfoPanel
-
+from ..utils.logging import *
+from ..actions.city_actions import CityActions
+import asyncio
 
 class SimulationView:
     """Simulation view component"""
@@ -37,7 +39,7 @@ class SimulationView:
     def initialize(self):
         """Initialize the component and its sub-components"""
         if not self.screen:
-            js.console.log(f"Warning: Screen element {self.screen_id} not found in the DOM")
+            warn(f"Warning: Screen element {self.screen_id} not found in the DOM")
             return
 
         # Set up back button handler
@@ -56,8 +58,12 @@ class SimulationView:
 
         # Mark as initialized
         self.initialized = True
+        self._initialization_in_progress = False
+        self.year = None
+        self.city_id = None
+        self.mode_id = None
 
-        js.console.log("SimulationView initialized")
+        log("SimulationView initialized")
 
     def on_state_change(self, state):
         """
@@ -66,71 +72,85 @@ class SimulationView:
         Args:
             state: Current application state
         """
+        if "simulation" != state.get("current_view", "home"):
+            return
+
         # Check if we should navigate to simulation view
         navigate_to_simulation = state.get("navigate_to_simulation", False)
 
         if navigate_to_simulation and self.initialized:
-            js.console.log(f"Processing navigation to simulation: {navigate_to_simulation}")
-            
+            log(f"Processing navigation to simulation: {navigate_to_simulation}")
+
             # Сначала сбрасываем флаг навигации, чтобы предотвратить повторную инициализацию
             from ..dispatch.dispatcher import Dispatcher
             dispatcher = Dispatcher()
             dispatcher.dispatch("RESET_NAVIGATION", None)
-            
-            # Затем инициализируем симуляцию
-            self._initialize_simulation(navigate_to_simulation)
 
-    def _initialize_simulation(self, navigation_data):
+            # Затем инициализируем симуляцию
+            asyncio.ensure_future(self._initialize_simulation(navigate_to_simulation))
+
+        if self.year != state.get("selected_year", self.year):
+            self.year = state.get("selected_year", self.year)
+            asyncio.ensure_future(CityActions.select_city_simulation(self.city_id, self.year, self.mode_id))
+
+    async def _initialize_simulation(self, navigation_data):
         """
         Initialize the simulation with the given data
 
         Args:
             navigation_data: Data for initializing the simulation
         """
-        js.console.log(f"Initializing simulation with data: {navigation_data}")
+        log(f"Initializing simulation with data: {navigation_data}")
 
         # Static variable to prevent re-initialization
-        if not hasattr(self, "_initialization_in_progress"):
+        if not self._initialization_in_progress:
             self._initialization_in_progress = True
+            log("_initialization_in_progress = True")
         else:
-            js.console.log("Initialization already in progress, skipping")
+            log("Initialization already in progress, skipping")
             return
 
         try:
             # Extract city_id and mode_id
-            city_id = navigation_data.get("city_id")
-            mode_id = navigation_data.get("mode_id", 1)  # Default to transport mode
+            self.city_id = navigation_data.get("city_id")
+            self.mode_id = navigation_data.get("mode_id")
 
-            if not city_id:
-                js.console.log("No city_id provided for simulation initialization")
+            if not self.city_id:
+                error("No city_id provided for simulation initialization")
                 return
+
+            if not self.mode_id:
+                error("No mode_id provided for simulation initialization")
+                return
+
+            self._update_mode_ui(self.mode_id)
+
+            # Здесь загружаем полные данные для симуляции
+            from ..actions.city_actions import CityActions
+
+            available_years = await CityActions.fetch_available_years(self.city_id)
+            self.year = available_years[0] if available_years is not None else 1500
+
+            await CityActions.select_city_simulation(self.city_id, self.year, self.mode_id)
 
             # Initialize sub-components if they haven't been initialized
             if self.map_view and not getattr(self.map_view, '_initialized', False):
-                js.console.log("Initializing MapView")
+                log("Initializing MapView")
                 self.map_view.initialize()
 
             if self.timeline and not getattr(self.timeline, '_initialized', False):
-                js.console.log("Initializing Timeline")
+                log("Initializing Timeline")
                 self.timeline.initialize()
 
             if self.info_panel and not getattr(self.info_panel, '_initialized', False):
-                js.console.log("Initializing InfoPanel")
+                log("Initializing InfoPanel")
                 self.info_panel.initialize()
 
-            # Update mode in store if provided
-            if mode_id:
-                from ..dispatch.dispatcher import Dispatcher
-                dispatcher = Dispatcher()
-                dispatcher.dispatch("SELECT_MODE", mode_id)
-
-                # Update the UI to reflect the selected mode
-                self._update_mode_ui(mode_id)
-
-            js.console.log(f"Simulation initialization complete for city_id: {city_id}, mode_id: {mode_id}")
+            log(f"Simulation initialization complete for city_id: { self.city_id}, mode_id: {self.mode_id}")
         finally:
             # Clear initialization flag
             self._initialization_in_progress = False
+            log("_initialization_in_progress = False")
 
     def _update_mode_ui(self, mode_id):
         """
@@ -155,7 +175,7 @@ class SimulationView:
 
     def _on_back_button(self, event):
         """Handle back button click"""
-        js.console.log("Back button clicked, returning to home screen")
+        log("Back button clicked, returning to home screen")
 
         # Hide simulation screen
         self.screen.classList.remove("active")
@@ -164,18 +184,10 @@ class SimulationView:
         home_screen = js.document.getElementById("home-screen")
         home_screen.classList.add("active")
 
-        # Optional: Reset any simulation state if needed
-        self._reset_simulation_state()
-
-    def _reset_simulation_state(self):
-        """Reset simulation state when returning to home screen"""
-        # This method can be used to clear any state that shouldn't
-        # persist when returning to the home screen
-
-        # Example: Clear any selected object
         from ..dispatch.dispatcher import Dispatcher
         dispatcher = Dispatcher()
         dispatcher.dispatch("CLEAR_SELECTION", None)
+        dispatcher.dispatch("NAVIGATE_TO_HOME")
 
     def show(self):
         """Show this view"""
@@ -191,45 +203,45 @@ class SimulationView:
 
     def cleanup(self):
         """Clean up resources when the component is destroyed"""
-        js.console.log("Cleaning up SimulationView resources")
+        log("Cleaning up SimulationView resources")
 
         if self.unsubscribe:
             try:
                 self.unsubscribe()
                 self.unsubscribe = None
             except Exception as e:
-                js.console.log(f"Error during unsubscribe: {e}")
+                error(f"Error during unsubscribe: {e}")
 
         # Clean up event handlers
         for handler_name, handler in self._handlers.items():
             try:
                 handler.destroy()
             except Exception as e:
-                js.console.log(f"Error destroying handler {handler_name}: {e}")
+                error(f"Error destroying handler {handler_name}: {e}")
 
         if hasattr(self, '_state_change_handler'):
             try:
                 self._state_change_handler.destroy()
             except Exception as e:
-                js.console.log(f"Error destroying state change handler: {e}")
+                error(f"Error destroying state change handler: {e}")
 
         # Clean up sub-components
         if self.map_view:
             try:
                 self.map_view.cleanup()
             except Exception as e:
-                js.console.log(f"Error cleaning up MapView: {e}")
+                error(f"Error cleaning up MapView: {e}")
 
         if self.timeline:
             try:
                 self.timeline.cleanup()
             except Exception as e:
-                js.console.log(f"Error cleaning up Timeline: {e}")
+                error(f"Error cleaning up Timeline: {e}")
 
         if self.info_panel:
             try:
                 self.info_panel.cleanup()
             except Exception as e:
-                js.console.log(f"Error cleaning up InfoPanel: {e}")
+                error(f"Error cleaning up InfoPanel: {e}")
 
-        js.console.log("SimulationView cleanup completed")
+        log("SimulationView cleanup completed")

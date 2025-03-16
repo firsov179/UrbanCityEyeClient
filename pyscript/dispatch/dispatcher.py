@@ -71,7 +71,8 @@ class Dispatcher:
 
         elif action_type == "SELECT_CITY":
             self._store.update_state({
-                "selected_city_id": payload,
+                "selected_city_id": payload['id'],
+                "selected_city_data": payload,
                 "selected_year": None,
                 "simulation": None,
                 "geo_objects": None,

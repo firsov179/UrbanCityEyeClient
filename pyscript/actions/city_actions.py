@@ -11,38 +11,14 @@ class CityActions:
     """Actions for managing cities"""
 
     @staticmethod
-    def select_city_simulation(city_id):
+    async def select_city_simulation(city_id, year, mode_id):
         """
         Select a city and load all related data for simulation
 
         Args:
             city_id: ID of the city to select
         """
-        dispatcher = Dispatcher()
-        dispatcher.dispatch("SELECT_CITY", city_id)
-
-        # Загружаем дополнительные данные для симуляции
-        asyncio.ensure_future(CityActions.fetch_available_years(city_id))
-
-    def navigate_to_simulation(city_id, mode_id=1):
-        """
-        Navigate to simulation screen
-
-        Args:
-            city_id: ID of the selected city
-            mode_id: ID of the selected mode (1=Transport, 2=Housing)
-        """
-        from ..store.app_store import AppStore
-        store = AppStore()
-        state = store.get_state()
-        current_view = state.get("current_view")
-    
-        if current_view != "simulation":
-            dispatcher = Dispatcher()
-            dispatcher.dispatch("NAVIGATE_TO_SIMULATION", {
-                "city_id": city_id,
-                "mode_id": mode_id
-            })
+        await CityActions.fetch_simulation(city_id, year, mode_id)
 
     @staticmethod
     def navigate_to_home():
@@ -85,7 +61,7 @@ class CityActions:
             return None
 
     @staticmethod
-    def select_city(city_id):
+    async def select_city(city_id):
         """
         Select a city
 
@@ -99,13 +75,19 @@ class CityActions:
         # Проверяем текущий экран
         current_view = state.get("current_view", "home")
 
+        response = await APIClient.get(f"cities/{city_id}")
         dispatcher = Dispatcher()
-        dispatcher.dispatch("SELECT_CITY", city_id)
+
+        if response:
+            dispatcher.dispatch("SELECT_CITY", response)
+        else:
+            error("Failed to fetch cities")
+            dispatcher.dispatch("API_ERROR", f"Failed to fetch city with id {city_id}")
 
         # Загружаем дополнительные данные только если находимся на экране симуляции
         if current_view == "simulation":
             # After selecting a city, fetch available years
-            asyncio.ensure_future(CityActions.fetch_available_years(city_id))
+            await CityActions.fetch_available_years(city_id)
 
     @staticmethod
     async def fetch_available_years(city_id):
@@ -147,11 +129,8 @@ class CityActions:
         dispatcher = Dispatcher()
         dispatcher.dispatch("SELECT_YEAR", year)
 
-        # After selecting a year, fetch the simulation
-        asyncio.ensure_future(CityActions.fetch_simulation(city_id, year))
-
     @staticmethod
-    async def fetch_simulation(city_id, year):
+    async def fetch_simulation(city_id, year, mode_id):
         """
         Fetch simulation data for a city and year
         
@@ -165,7 +144,7 @@ class CityActions:
         dispatcher = Dispatcher()
         dispatcher.dispatch("SIMULATION_REQUEST")
 
-        response = await APIClient.get(f"simulations/city/{city_id}/year/{year}")
+        response = await APIClient.get(f"simulations/city/{city_id}/year/{year}/mode/{mode_id}")
 
         if response:
             dispatcher.dispatch("SET_SIMULATION", response)
@@ -176,7 +155,7 @@ class CityActions:
 
             return response
         else:
-            dispatcher.dispatch("API_ERROR", f"Failed to fetch simulation for city {city_id}, year {year}")
+            dispatcher.dispatch("API_ERROR", f"Failed to fetch simulation for city {city_id}, year {year}, mode {mode_id}")
             return None
 
     @staticmethod

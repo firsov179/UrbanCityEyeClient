@@ -14,9 +14,9 @@ MAP_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">Open
 
 # City Positions (for home screen map)
 CITY_POSITIONS = {
-    "London": {"left": 23.3, "top": 54},
-    "Paris": {"left": 28, "top": 65},
-    "Moscow": {"left": 66, "top": 44},
-    "Rome": {"left": 40, "top": 83},
-    "Saint Petersburg": {"left": 59, "top": 35}
+    1: {"left": 23.3, "top": 54},
+    2: {"left": 28, "top": 65},
+    3: {"left": 66, "top": 44},
+    4: {"left": 40, "top": 83},
+    5: {"left": 59, "top": 35}
 }

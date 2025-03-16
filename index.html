@@ -36,7 +36,6 @@
             "./pyscript/dispatch/__init__.py",
             "./pyscript/dispatch/dispatcher.py",
             "./pyscript/views/__init__.py",
-            "./pyscript/views/city_selector.py",
             "./pyscript/views/timeline.py",
             "./pyscript/views/map_view.py",
             "./pyscript/views/info_panel.py",
@@ -89,6 +88,10 @@
     <!-- Главный экран с выбором города -->
     <div id="home-screen" class="screen active">
         <div class="home-container">
+            <div class="language-switcher">
+                <button class="lang-btn active" data-lang="en">EN</button>
+                <button class="lang-btn" data-lang="ru">RU</button>
+            </div>
             <h1 class="home-title">Urban City Eye</h1>
 
             <!-- Карта с городами -->
@@ -106,26 +109,30 @@
             <div id="home-info-panel">
                 <h2 id="city-info-title">Select a City</h2>
                 <div id="city-info-content">
-                    <p>Click on a city to view information.</p>
-                </div>
+                    <p data-en="Click on a city to view information." data-ru="Нажмите на город, чтобы просмотреть информацию.">                </div>
 
                 <!-- Выбор режима моделирования -->
                 <div id="mode-selection">
-                    <h3>Simulation Mode</h3>
+                    <h3 data-en="Simulation Mode" data-ru="Режим моделирования">Simulation Mode</h3>
                     <div class="mode-options">
                         <div class="mode-option active" data-mode="transport">
                             <div class="mode-icon transport-icon"></div>
-                            <div class="mode-label">Transport Infrastructure</div>
-                        </div>
+                            <div class="mode-label" data-en="Transport Infrastructure" data-ru="Транспортная инфраструктура">
+                                Transport Infrastructure
+                            </div>                        </div>
                         <div class="mode-option" data-mode="housing">
                             <div class="mode-icon housing-icon"></div>
-                            <div class="mode-label">Housing Development</div>
+                            <div class="mode-label" data-en="Housing Development" data-ru="Городская застройка">
+                                Housing Development
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Кнопка перехода к моделированию -->
-                <button id="start-simulation" class="primary-button" disabled>View Simulation</button>
+                <button id="start-simulation" disabled data-en="View Simulation" data-ru="Посмотреть симуляцию">
+                    View Simulation
+                </button>
             </div>
         </div>
     </div>

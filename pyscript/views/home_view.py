@@ -1,11 +1,14 @@
 """
 Home view component with city selection and mode selection
 """
+import logging
+
 import js
+import asyncio
 from pyodide.ffi import create_proxy
 from ..store.app_store import AppStore
 from ..actions.city_actions import CityActions
-from ..utils.logging import warn
+from ..utils.logging import warn, log
 
 class HomeView:
     """Home view with city selection and mode selection"""
@@ -38,7 +41,7 @@ class HomeView:
         self.start_btn = js.document.getElementById(start_btn_id)
 
         self.store = AppStore()
-        self.cities = []
+        self.cities = dict()
         self.selected_city_id = None
         self.selected_mode_id = 1  # Default: Transport Infrastructure
 
@@ -73,17 +76,16 @@ class HomeView:
     def _on_window_resize(self, event):
         """Handle window resize event"""
         # Update all marker positions when window is resized
+        current_lang = js.document.documentElement.lang or "en"
+
         for city_id, marker in self.city_markers.items():
             # Find the city data
-            city = next((c for c in self.cities if c.get("id") == city_id), None)
-            if not city:
-                continue
-                
-            city_name = city.get("name")
+            city = self.cities[city_id]
+            city_name = city.get("name_ru" if current_lang == "ru" else "name")
             # Get position from config
             from ..config import CITY_POSITIONS
-            if city_name in CITY_POSITIONS:
-                position = CITY_POSITIONS.get(city_name)
+            if city_id in CITY_POSITIONS:
+                position = CITY_POSITIONS.get(city_id)
                 # Update marker position
                 self._update_marker_position(marker, position)
         # Also update city selection highlight
@@ -91,6 +93,21 @@ class HomeView:
 
     def _setup_event_handlers(self):
         """Set up event handlers for UI elements"""
+        # Existing handlers for modes...
+
+        # Set up language switcher handlers
+        lang_buttons = js.document.querySelectorAll('.lang-btn')
+        for i in range(lang_buttons.length):
+            button = lang_buttons.item(i)
+            lang = button.getAttribute('data-lang')
+
+            # Create and store handler
+            handler = create_proxy(lambda event, lang=lang: self._on_language_change(event, lang))
+            self._handlers[f"lang_{lang}"] = handler
+
+            # Attach handler
+            button.addEventListener('click', handler)
+
         # Set up mode selection handlers
         mode_options = self.screen.querySelectorAll('.mode-option')
         for i in range(mode_options.length):
@@ -123,13 +140,19 @@ class HomeView:
         """
         # Update cities if they've changed
         new_cities = state.get("cities", [])
-        if new_cities != self.cities:
-            self.cities = new_cities
+        bool_need_render = False
+        for city in new_cities:
+            if city['id'] not in self.cities or self.cities[city['id']] != city:
+                bool_need_render = True
+                self.cities[city['id']] = city
+        if bool_need_render and "home" == state.get("current_view", "home"):
             self._render_city_markers()
+
 
         # Update selected city
         new_selected_city_id = state.get("selected_city_id")
         if new_selected_city_id != self.selected_city_id:
+            self.cities[new_selected_city_id] = state.get("selected_city_data")
             self.selected_city_id = new_selected_city_id
             self._update_city_selection()
             self._update_city_info()
@@ -137,6 +160,8 @@ class HomeView:
 
     def _render_city_markers(self):
         """Render markers for all cities on the map with dynamic positioning"""
+
+        log("render city markers")
         # Clear existing markers
         self.markers_container.innerHTML = ""
         self.city_markers = {}
@@ -144,13 +169,15 @@ class HomeView:
         # Import city positions from config
         from ..config import CITY_POSITIONS
 
+        # Get current language
+        current_lang = js.document.documentElement.lang or "en"
+
         # Add markers for each city
-        for city in self.cities:
-            city_id = city.get("id")
-            city_name = city.get("name")
+        for city_id, city in self.cities.items():
+            city_name = city.get("name_ru" if current_lang == "ru" else "name")
 
             # Skip cities not in our preset positions
-            if city_name not in CITY_POSITIONS:
+            if city_id not in CITY_POSITIONS:
                 continue
 
             # Create marker
@@ -159,7 +186,7 @@ class HomeView:
             marker.setAttribute("data-city-id", str(city_id))
 
             # Set position in percentage based on the map's actual display area
-            position = CITY_POSITIONS.get(city_name, {"left": 50, "top": 50})
+            position = CITY_POSITIONS.get(city_id, {"left": 50, "top": 50})
             
             # Get the actual dimensions of the map
             self._update_marker_position(marker, position)
@@ -257,39 +284,43 @@ class HomeView:
     def _update_city_info(self):
         """Update city information panel"""
         # Find the selected city
-        selected_city = None
-        for city in self.cities:
-            if city.get("id") == self.selected_city_id:
-                selected_city = city
-                break
+        selected_city = self.cities[self.selected_city_id]
+
+        # Get current language
+        current_lang = js.document.documentElement.lang or "en"
+        is_russian = current_lang == "ru"
 
         # Update info panel
         if selected_city:
-            self.info_title.textContent = selected_city.get("name", "Unknown City")
+            # Use localized name based on language
+            city_name = selected_city.get("name_ru" if is_russian else "name", "Unknown City")
+            self.info_title.textContent = city_name
 
             # Create city info content
             content_html = ""
 
             # Country
-            country = selected_city.get("country", "Unknown")
+            country_label = "Страна:" if is_russian else "Country:"
+            country = selected_city.get("country_ru" if is_russian else "country", "Unknown")
             content_html += f"""
             <div class="city-detail">
-                <div class="city-detail-label">Country:</div>
+                <div class="city-detail-label">{country_label}</div>
                 <div>{country}</div>
             </div>
             """
 
             # Founded year
-            founded = selected_city.get("founded", "Unknown")
+            founded_label = "Основан:" if is_russian else "Founded:"
+            founded = selected_city.get("foundation_ru" if is_russian else "foundation", "Unknown")
             content_html += f"""
             <div class="city-detail">
-                <div class="city-detail-label">Founded:</div>
+                <div class="city-detail-label">{founded_label}</div>
                 <div>{founded}</div>
             </div>
             """
 
             # Description
-            description = selected_city.get("description", "No description available.")
+            description = selected_city.get("description_ru" if is_russian else "description", "No description available.")
             content_html += f"""
             <div class="city-description">
                 {description}
@@ -298,8 +329,11 @@ class HomeView:
 
             self.info_content.innerHTML = content_html
         else:
-            self.info_title.textContent = "Select a City"
-            self.info_content.innerHTML = "<p>Click on a city to view information.</p>"
+            select_message = "Выберите город" if is_russian else "Select a City"
+            click_message = "Нажмите на город, чтобы просмотреть информацию." if is_russian else "Click on a city to view information."
+
+            self.info_title.textContent = select_message
+            self.info_content.innerHTML = f"<p>{click_message}</p>"
 
     def _update_start_button(self):
         """Update start simulation button state"""
@@ -317,7 +351,7 @@ class HomeView:
             city_id: ID of the clicked city
         """
         # Только выбираем город без загрузки дополнительных данных
-        CityActions.select_city(city_id)
+        asyncio.ensure_future(CityActions.select_city(city_id))
 
     def _on_mode_select(self, event, mode_id):
         """
@@ -338,6 +372,7 @@ class HomeView:
 
         # Update selected mode
         self.selected_mode_id = mode_id
+        log(f"selected_mode_id: {mode_id}")
 
         # Update store (только обновляем режим, не вызываем загрузку данных)
         from ..dispatch.dispatcher import Dispatcher
@@ -354,10 +389,6 @@ class HomeView:
         simulation_screen = js.document.getElementById("simulation-screen")
         simulation_screen.classList.add("active")
 
-        # Здесь загружаем полные данные для симуляции
-        from ..actions.city_actions import CityActions
-        CityActions.select_city_simulation(self.selected_city_id)
-
         # Trigger simulation view initialization
         from ..dispatch.dispatcher import Dispatcher
         dispatcher = Dispatcher()
@@ -365,6 +396,44 @@ class HomeView:
             "city_id": self.selected_city_id,
             "mode_id": self.selected_mode_id
         })
+
+    def _on_language_change(self, event, lang):
+        """Handle language change"""
+        # Update active button
+        lang_buttons = js.document.querySelectorAll('.lang-btn')
+        for i in range(lang_buttons.length):
+            button = lang_buttons.item(i)
+            if button.getAttribute('data-lang') == lang:
+                button.classList.add('active')
+            else:
+                button.classList.remove('active')
+        
+        # Set document language
+        js.document.documentElement.lang = lang
+        
+        # Update all translatable elements
+        translatable_elements = js.document.querySelectorAll('[data-' + lang + ']')
+        for i in range(translatable_elements.length):
+            element = translatable_elements.item(i)
+            element.textContent = element.getAttribute('data-' + lang)
+
+        current_lang = js.document.documentElement.lang or "en"
+        for city_id, marker in self.city_markers.items():
+            # Find the corresponding city data
+            city_data = self.cities[city_id]
+            if city_data:
+                # Get the appropriate name based on language
+                city_name = city_data.get("name_ru" if current_lang == "ru" else "name", "Unknown")
+
+                # Update the marker label
+                label_element = marker.querySelector('.city-marker-label')
+                if label_element:
+                    label_element.textContent = city_name
+        
+        # Update city info if a city is selected
+        if self.selected_city_id:
+            self._update_city_info()
+
 
 
     def show(self):

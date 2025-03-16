@@ -7,11 +7,6 @@ function callPython(functionPath, ...args) {
   `);
 }
 
-// Navigation helpers
-function navigateToSimulation(cityId, modeId) {
-  callPython("pyscript.actions.city_actions.CityActions.navigate_to_simulation", cityId, modeId);
-}
-
 function navigateToHome() {
   callPython("pyscript.actions.city_actions.CityActions.navigate_to_home");
 }

@@ -9,7 +9,6 @@ import asyncio
 from pyodide.ffi import create_proxy
 from pyscript.store.app_store import AppStore
 from pyscript.dispatch.dispatcher import Dispatcher
-from pyscript.views.city_selector import CitySelector
 from pyscript.views.timeline import Timeline
 from pyscript.views.map_view import MapView
 from pyscript.views.info_panel import InfoPanel
@@ -22,7 +21,6 @@ from pyscript.config import API_BASE_URL, MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM
 from pyscript.utils.logging import *
 
 # Global variables to hold view instances
-city_selector = None
 timeline = None
 map_view = None
 info_panel = None
@@ -58,7 +56,7 @@ sys.excepthook = global_exception_handler
 
 async def initialize_app():
     """Initialize the application and all its components"""
-    global city_selector, timeline, map_view, info_panel, home_view, simulation_view, store, app_initialized
+    global timeline, map_view, info_panel, home_view, simulation_view, store, app_initialized
 
     # Проверяем, была ли уже выполнена инициализация
     if app_initialized:
@@ -80,16 +78,12 @@ async def initialize_app():
 
     # Проверяем наличие элементов для компонентов основного интерфейса
     timeline_container = js.document.getElementById("timeline-container")
-    city_selector_container = js.document.getElementById("city-selector-container")
 
     # Инициализируем только те компоненты, для которых есть контейнеры
     if timeline_container:
         timeline = Timeline()
         timeline.initialize()
 
-    if city_selector_container:
-        city_selector = CitySelector()
-        city_selector.initialize()
 
     # Инициализация остальных компонентов
     home_view.initialize()
@@ -144,19 +138,6 @@ def register_keyboard_events():
         # Получаем текущее представление
         state = store.get_state()
         current_view = state.get("current_view", "home")
-
-        # Если мы на домашнем экране, обрабатываем только некоторые клавиши
-        if current_view == "home":
-            key = event.key.lower()
-
-            # Enter для перехода к симуляции если выбран город
-            if key == "enter":
-                if state.get("selected_city_id"):
-                    CityActions.navigate_to_simulation(
-                        state.get("selected_city_id"),
-                        state.get("selected_mode_id", 1)
-                    )
-            return
 
         # Обработка клавиш для экрана симуляции
         key = event.key.lower()
@@ -259,8 +240,6 @@ def cleanup():
         simulation_view.cleanup()
 
     # Очистка компонентов основного интерфейса
-    if city_selector:
-        city_selector.cleanup()
 
     if timeline:
         timeline.cleanup()
