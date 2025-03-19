@@ -3,30 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>City Infrastructure Evolution</title>
-    
+    <title>Urban City Eye</title>
+
     <!-- CSS стили -->
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/map.css">
-    
+    <link rel="stylesheet" href="css/home.css">
+
     <!-- Leaflet для карт -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
+
     <!-- PyScript -->
-    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
-    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
-    
+    <link rel="stylesheet" href="https://pyscript.net/releases/2023.05.1/pyscript.css" />
+    <script defer src="https://pyscript.net/releases/2023.05.1/pyscript.js"></script>
+
     <!-- JavaScript интеграция -->
     <script src="js/helpers.js"></script>
-    
+
     <!-- PyScript конфигурация -->
-    <py-config>
-        packages = [
-            "requests",
-            "numpy",
-            "pandas"
-        ]
+    <py-config type="toml">
+        trminal = false
+
         [[fetch]]
         files = [
             "./pyscript/actions/__init__.py",
@@ -38,41 +36,127 @@
             "./pyscript/dispatch/__init__.py",
             "./pyscript/dispatch/dispatcher.py",
             "./pyscript/views/__init__.py",
-            "./pyscript/views/city_selector.py",
             "./pyscript/views/timeline.py",
             "./pyscript/views/map_view.py",
             "./pyscript/views/info_panel.py",
+            "./pyscript/views/home_view.py",
+            "./pyscript/views/simulation_view.py",
             "./pyscript/utils/__init__.py",
             "./pyscript/utils/api_client.py",
             "./pyscript/utils/geo_utils.py",
+            "./pyscript/utils/logging.py",
             "./pyscript/config.py",
             "./pyscript/main.py"
         ]
     </py-config>
+
+    <style>
+        /* Базовые стили для двух экранов */
+        .screen {
+            display: none;
+            width: 100%;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            padding: 8px 16px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .back-button:hover {
+            background-color: #f0f0f0;
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <h1>City Infrastructure Evolution</h1>
-        <div id="city-selector-container"></div>
-    </header>
-    
-    <main>
-        <div class="timeline-container" id="timeline-container"></div>
-        
-        <div class="content-container">
-            <div id="map-container" class="map-container"></div>
-            
-            <div id="info-panel" class="info-panel">
-                <h2>Information Panel</h2>
-                <div id="info-content"></div>
+    <!-- Главный экран с выбором города -->
+    <div id="home-screen" class="screen active">
+        <div class="home-container">
+            <div class="language-switcher">
+                <button class="lang-btn active" data-lang="en">EN</button>
+                <button class="lang-btn" data-lang="ru">RU</button>
+            </div>
+            <h1 class="home-title">Urban City Eye</h1>
+
+            <!-- Карта с городами -->
+            <div id="europe-map-container">
+                <div class="map-wrapper">
+                    <div class="map-inner">
+                        <div class="map-image"></div> 
+                        <div id="city-markers-container"></div>
+                    </div>
+                    <div class="map-compass"></div>
+                </div>
+            </div>
+
+            <!-- Информационная панель справа -->
+            <div id="home-info-panel">
+                <h2 id="city-info-title">Select a City</h2>
+                <div id="city-info-content">
+                    <p data-en="Click on a city to view information." data-ru="Нажмите на город, чтобы просмотреть информацию.">                </div>
+
+                <!-- Выбор режима моделирования -->
+                <div id="mode-selection">
+                    <h3 data-en="Simulation Mode" data-ru="Режим моделирования">Simulation Mode</h3>
+                    <div class="mode-options">
+                        <div class="mode-option active" data-mode="transport">
+                            <div class="mode-icon transport-icon"></div>
+                            <div class="mode-label" data-en="Transport Infrastructure" data-ru="Транспортная инфраструктура">
+                                Transport Infrastructure
+                            </div>                        </div>
+                        <div class="mode-option" data-mode="housing">
+                            <div class="mode-icon housing-icon"></div>
+                            <div class="mode-label" data-en="Housing Development" data-ru="Городская застройка">
+                                Housing Development
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Кнопка перехода к моделированию -->
+                <button id="start-simulation" disabled data-en="View Simulation" data-ru="Посмотреть симуляцию">
+                    View Simulation
+                </button>
             </div>
         </div>
-    </main>
-    
-    <footer>
-        <p>&copy; 2023 City Infrastructure Evolution Project</p>
-    </footer>
-    
+    </div>
+
+    <!-- Экран с моделированием -->
+    <div id="simulation-screen" class="screen">
+        <button id="back-to-home" class="back-button">← Back to Cities</button>
+
+        <div class="simulation-container">
+            <!-- Временная шкала -->
+            <div id="timeline-container"></div>
+
+            <!-- Контейнер с картой и информацией -->
+            <div class="content-container">
+                <div id="map-container" class="map-container"></div>
+
+                <div id="info-panel" class="info-panel">
+                    <h2>Information</h2>
+                    <div id="info-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- PyScript код -->
     <py-script src="./pyscript/main.py"></py-script>
 </body>

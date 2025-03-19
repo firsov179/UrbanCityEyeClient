@@ -1,0 +1,41 @@
+.map-container {
+    flex: 1;
+    height: 100%;
+    z-index: 0;
+}
+
+#map-container {
+    min-height: 500px;
+}
+
+/* Leaflet custom styles */
+.leaflet-popup-content-wrapper {
+    border-radius: 4px;
+}
+
+.leaflet-control-attribution {
+    display: none;
+  }
+
+.leaflet-popup-content {
+    margin: 10px 14px;
+    line-height: 1.4;
+}
+
+.leaflet-popup-content h4 {
+    margin: 0 0 5px 0;
+    color: #2c3e50;
+}
+
+.leaflet-popup-content p {
+    margin: 5px 0;
+}
+
+.leaflet-control-layers-toggle {
+    background-color: white;
+}
+
+.leaflet-control-zoom a {
+    color: #2c3e50;
+}
+
