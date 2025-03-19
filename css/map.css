@@ -22,6 +22,36 @@
     line-height: 1.4;
 }
 
+#back-to-home,
+#back-to-cities,
+#simulation-screen button[id*="back"],
+.back-button {
+    position: absolute !important;
+    top: 20px !important;
+    right: 20px !important;
+    left: auto !important; /* Убираем любое левое выравнивание */
+    width: auto !important; /* Убираем ширину на весь экран */
+    max-width: 200px !important; /* Ограничиваем максимальную ширину */
+    z-index: 1000 !important;
+    padding: 8px 16px !important;
+    background-color: #fff !important;
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
+    font-weight: bold !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    display: inline-block !important; /* Предотвращаем блочное отображение */
+}
+
+#back-to-home:hover,
+#back-to-cities:hover,
+#simulation-screen button[id*="back"]:hover,
+.back-button:hover {
+    background-color: #f0f0f0 !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+}
+
 .leaflet-popup-content h4 {
     margin: 0 0 5px 0;
     color: #2c3e50;
