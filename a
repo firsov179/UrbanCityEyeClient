@@ -1,0 +1,169 @@
+def predict_next_year_direct(model, year_sequence, patch_positions, output_dir=OUTPUT_DIR):
+    """
+    Прямое использование предсказаний без отбеливания и сложного усреднения
+    """
+    last_year = year_sequence[-1]
+    next_year = last_year + 5  # Предполагаем шаг в 5 лет
+
+    print(f"Создание прогноза на {next_year} год на основе годов {year_sequence}")
+    
+    # Получаем информацию о формате модели
+    input_shape = model.input_shape
+    print(f"Форма входных данных модели: {input_shape}")
+
+    # Создаем пустое белое изображение для результата
+    result_img = np.ones((ORIG_HEIGHT, ORIG_WIDTH, 3))
+    
+    # Список всех предсказанных фрагментов и их позиций
+    predictions_list = []
+    positions_list = []
+    
+    # Создаем сетку позиций (без перекрытия)
+    grid_positions = []
+    stride = PATCH_SIZE  # Без перекрытия
+    for y in range(0, ORIG_HEIGHT - PATCH_SIZE + 1, stride):
+        for x in range(0, ORIG_WIDTH - PATCH_SIZE + 1, stride):
+            grid_positions.append((y, x))
+
+    print(f"Создано {len(grid_positions)} позиций сетки без перекрытия")
+    
+    # Находим ближайший реальный фрагмент для каждой позиции в сетке
+    grid_to_real = {}
+    for grid_pos in grid_positions:
+        grid_y, grid_x = grid_pos
+        
+        # Находим ближайший реальный фрагмент
+        min_dist = float('inf')
+        closest_pos = None
+        
+        for pos in patch_positions:
+            real_y, real_x = pos
+            dist = ((real_y - grid_y) ** 2 + (real_x - grid_x) ** 2) ** 0.5
+            if dist < min_dist:
+                min_dist = dist
+                closest_pos = pos
+        
+        if closest_pos is not None:
+            grid_to_real[grid_pos] = closest_pos
+
+    print(f"Сопоставлено {len(grid_to_real)} позиций сетки с реальными фрагментами")
+    
+    # Обрабатываем сетку батчами
+    batch_size = 4
+    processed_count = 0
+    
+    for i in range(0, len(grid_positions), batch_size):
+        # Очищаем память
+        gc.collect()
+        
+        batch_grid_positions = grid_positions[i:i+batch_size]
+        X_batch = []
+        valid_grid_positions = []
+        
+        # Загружаем фрагменты для каждой позиции сетки
+        for grid_pos in batch_grid_positions:
+            if grid_pos in grid_to_real:
+                real_pos = grid_to_real[grid_pos]
+                
+                # Загружаем последовательность фрагментов
+                input_sequence = []
+                valid_sequence = True
+                
+                for year in year_sequence:
+                    patch_path = os.path.join(PATCHES_DIR, str(year), f"{year}_{real_pos[0]}_{real_pos[1]}.png")
+                    if os.path.exists(patch_path):
+                        try:
+                            img = Image.open(patch_path)
+                            
+                            # Преобразуем в RGB, если нужно
+                            if img.mode != 'RGB':
+                                img = img.convert('RGB')
+                                
+                            # Убеждаемся в правильном размере
+                            if img.size[0] != PATCH_SIZE or img.size[1] != PATCH_SIZE:
+                                img = img.resize((PATCH_SIZE, PATCH_SIZE), Image.LANCZOS)
+                                
+                            img_array = np.array(img) / 255.0
+                            input_sequence.append(img_array)
+                            img.close()
+                        except Exception as e:
+                            print(f"Ошибка при загрузке фрагмента {patch_path}: {e}")
+                            valid_sequence = False
+                            break
+                    else:
+                        valid_sequence = False
+                        break
+                
+                if valid_sequence and len(input_sequence) == len(year_sequence):
+                    X_batch.append(input_sequence)
+                    valid_grid_positions.append(grid_pos)
+        
+        if not X_batch:
+            continue
+        
+        # Предсказываем фрагменты
+        try:
+            X_batch_array = np.array(X_batch)
+            predictions = model.predict(X_batch_array, verbose=0)
+            
+            # Отладочная информация о предсказаниях
+            print(f"Форма предсказаний: {predictions.shape}")
+            print(f"Мин/макс/среднее: {predictions.min():.4f}/{predictions.max():.4f}/{predictions.mean():.4f}")
+            
+            # Сохраняем один фрагмент для отладки
+            if processed_count == 0:
+                test_pred = predictions[0]
+                test_img = Image.fromarray((test_pred * 255).astype(np.uint8))
+                test_path = os.path.join(output_dir, "single_prediction.png")
+                test_img.save(test_path)
+                print(f"Сохранен одиночный фрагмент: {test_path}")
+        except Exception as e:
+            print(f"Ошибка при предсказании батча: {e}")
+            continue
+        
+        # Обновляем результаты
+        for pred, grid_pos in zip(predictions, valid_grid_positions):
+            grid_y, grid_x = grid_pos
+            
+            # Обрезаем размер фрагмента, если он выходит за границы
+            effective_h = min(PATCH_SIZE, ORIG_HEIGHT - grid_y)
+            effective_w = min(PATCH_SIZE, ORIG_WIDTH - grid_x)
+            
+            if effective_h <= 0 or effective_w <= 0:
+                continue
+            
+            # Прямая вставка предсказания в результат без обработки
+            result_img[grid_y:grid_y+effective_h, grid_x:grid_x+effective_w] = pred[:effective_h, :effective_w]
+            
+            # Сохраняем предсказание и позицию
+            predictions_list.append(pred[:effective_h, :effective_w])
+            positions_list.append((grid_y, grid_x, effective_h, effective_w))
+        
+        processed_count += len(valid_grid_positions)
+        print(f"Обработано {processed_count}/{len(grid_positions)} позиций сетки")
+        
+        # Сохраняем промежуточные результаты
+        if processed_count % 20 == 0 or processed_count >= len(grid_positions):
+            temp_path = os.path.join(output_dir, f"direct_prediction_{next_year}_{processed_count}.png")
+            temp_img = Image.fromarray((result_img * 255).astype(np.uint8))
+            temp_img.save(temp_path)
+            print(f"Промежуточный результат сохранен: {temp_path}")
+    
+    # Сохраняем окончательный результат
+    final_path = os.path.join(output_dir, f"direct_final_{next_year}.png")
+    final_img = Image.fromarray((result_img * 255).astype(np.uint8))
+    final_img.save(final_path)
+    print(f"Окончательное изображение сохранено: {final_path}")
+    
+    # Сохраняем все фрагменты отдельно для анализа
+    fragments_dir = os.path.join(output_dir, f"fragments_{next_year}")
+    os.makedirs(fragments_dir, exist_ok=True)
+    
+    for i, (pred, (y, x, h, w)) in enumerate(zip(predictions_list, positions_list)):
+        frag_path = os.path.join(fragments_dir, f"fragment_{i}_y{y}_x{x}.png")
+        frag_img = Image.fromarray((pred * 255).astype(np.uint8))
+        frag_img.save(frag_path)
+    
+    print(f"Сохранено {len(predictions_list)} фрагментов в папке {fragments_dir}")
+    
+    return next_year, result_img
