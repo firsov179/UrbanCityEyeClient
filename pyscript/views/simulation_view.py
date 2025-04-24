@@ -42,21 +42,17 @@ class SimulationView:
             warn(f"Warning: Screen element {self.screen_id} not found in the DOM")
             return
 
-        # Set up back button handler
         back_handler = create_proxy(self._on_back_button)
         self._handlers["back"] = back_handler
         self.back_button.addEventListener("click", back_handler)
 
-        # Subscribe to store changes
         self._state_change_handler = create_proxy(self.on_state_change)
         self.unsubscribe = self.store.subscribe(self._state_change_handler)
 
-        # Initialize sub-components
         self.map_view = MapView()
         self.timeline = Timeline()
         self.info_panel = InfoPanel()
 
-        # Mark as initialized
         self.initialized = True
         self._initialization_in_progress = False
         self.year = None
@@ -75,18 +71,15 @@ class SimulationView:
         if "simulation" != state.get("current_view", "home"):
             return
 
-        # Check if we should navigate to simulation view
         navigate_to_simulation = state.get("navigate_to_simulation", False)
 
         if navigate_to_simulation and self.initialized:
             log(f"Processing navigation to simulation: {navigate_to_simulation}")
 
-            # Сначала сбрасываем флаг навигации, чтобы предотвратить повторную инициализацию
             from ..dispatch.dispatcher import Dispatcher
             dispatcher = Dispatcher()
             dispatcher.dispatch("RESET_NAVIGATION", None)
 
-            # Затем инициализируем симуляцию
             asyncio.ensure_future(self._initialize_simulation(navigate_to_simulation))
 
         if self.year != state.get("selected_year", self.year):
@@ -102,7 +95,6 @@ class SimulationView:
         """
         log(f"Initializing simulation with data: {navigation_data}")
 
-        # Static variable to prevent re-initialization
         if not self._initialization_in_progress:
             self._initialization_in_progress = True
             log("_initialization_in_progress = True")
@@ -111,7 +103,6 @@ class SimulationView:
             return
 
         try:
-            # Extract city_id and mode_id
             self.city_id = navigation_data.get("city_id")
             self.mode_id = navigation_data.get("mode_id")
 
@@ -125,7 +116,6 @@ class SimulationView:
 
             self._update_mode_ui(self.mode_id)
 
-            # Здесь загружаем полные данные для симуляции
             from ..actions.city_actions import CityActions
 
             available_years = await CityActions.fetch_available_years(self.city_id)
@@ -133,7 +123,6 @@ class SimulationView:
 
             await CityActions.select_city_simulation(self.city_id, self.year, self.mode_id)
 
-            # Initialize sub-components if they haven't been initialized
             if self.map_view and not getattr(self.map_view, '_initialized', False):
                 log("Initializing MapView")
                 self.map_view.initialize()
@@ -148,7 +137,6 @@ class SimulationView:
 
             log(f"Simulation initialization complete for city_id: { self.city_id}, mode_id: {self.mode_id}")
         finally:
-            # Clear initialization flag
             self._initialization_in_progress = False
             log("_initialization_in_progress = False")
 
@@ -159,28 +147,32 @@ class SimulationView:
         Args:
             mode_id: ID of the selected mode
         """
-        # This could include updating titles, colors, or other UI elements
-        # based on the selected mode
-
-        # Example: Update the info panel title
         if self.info_panel:
             title_elem = js.document.querySelector(f"#{self.info_panel.panel_id} > h2")
             if title_elem:
+                current_lang = js.document.documentElement.lang or "en"
+                
                 if mode_id == 1:
-                    title_elem.textContent = "Transport Infrastructure"
+                    title_elem.setAttribute("data-en", "Transport Infrastructure")
+                    title_elem.setAttribute("data-ru", "Транспортная Инфраструктура")
+                    title_elem.textContent = title_elem.getAttribute(f"data-{current_lang}")
                 elif mode_id == 2:
-                    title_elem.textContent = "Housing Development"
+                    title_elem.setAttribute("data-en", "Housing Development") 
+                    title_elem.setAttribute("data-ru", "Жилищное Строительство")
+                    title_elem.textContent = title_elem.getAttribute(f"data-{current_lang}")
                 else:
-                    title_elem.textContent = "Information"
+                    title_elem.setAttribute("data-en", "Information")
+                    title_elem.setAttribute("data-ru", "Информация")
+                    title_elem.textContent = title_elem.getAttribute(f"data-{current_lang}")
+
+
 
     def _on_back_button(self, event):
         """Handle back button click"""
         log("Back button clicked, returning to home screen")
 
-        # Hide simulation screen
         self.screen.classList.remove("active")
 
-        # Show home screen
         home_screen = js.document.getElementById("home-screen")
         home_screen.classList.add("active")
 
@@ -193,7 +185,6 @@ class SimulationView:
         """Show this view"""
         self.screen.classList.add("active")
 
-        # Force map to refresh if needed
         if self.map_view and self.map_view.map:
             self.map_view.map.invalidateSize()
 
@@ -212,7 +203,6 @@ class SimulationView:
             except Exception as e:
                 error(f"Error during unsubscribe: {e}")
 
-        # Clean up event handlers
         for handler_name, handler in self._handlers.items():
             try:
                 handler.destroy()
@@ -225,7 +215,6 @@ class SimulationView:
             except Exception as e:
                 error(f"Error destroying state change handler: {e}")
 
-        # Clean up sub-components
         if self.map_view:
             try:
                 self.map_view.cleanup()
