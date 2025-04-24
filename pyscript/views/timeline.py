@@ -32,12 +32,10 @@ class Timeline:
             js.console.log(f"Warning: Container {self.container_id} not found in DOM")
             return
 
-        # Subscribe to store changes
         from pyodide.ffi import create_proxy
         self._state_change_handler = create_proxy(self.on_state_change)
         self.unsubscribe = self.store.subscribe(self._state_change_handler)
 
-        # Initial render
         self.render()
 
     def on_state_change(self, state):
@@ -51,7 +49,6 @@ class Timeline:
         if isinstance(self.animation_active, dict):
             self.animation_active = self.animation_active.get("active", False)
 
-        # Update available years
         available_years = state.get("available_years", [])
         if available_years:
             sorted_years = sorted(available_years)
@@ -66,17 +63,14 @@ class Timeline:
         if self.container is None:
             return
 
-        # Get the current state
         state = self.store.get_state()
         selected_city_id = state.get("selected_city_id")
         selected_year = state.get("selected_year")
         available_years = state.get("available_years", [])
         loading = state.get("loading", False)
 
-        # Clear previous content
         self.container.innerHTML = ""
 
-        # If no city is selected, show a message
         if not selected_city_id:
             message = js.document.createElement("p")
             message.className = "timeline-message"
@@ -84,7 +78,6 @@ class Timeline:
             self.container.appendChild(message)
             return
 
-        # If no years are available, show a message
         if not available_years or len(available_years) == 0:
             message = js.document.createElement("p")
             message.className = "timeline-message"
@@ -92,22 +85,28 @@ class Timeline:
             self.container.appendChild(message)
             return
 
-        # Sort years
         sorted_years = sorted(available_years)
         min_year = sorted_years[0]
         max_year = sorted_years[-1]
         self.min_year = min_year
         self.max_year = max_year
 
-        # Default selected year if none is set
         if not selected_year:
             selected_year = sorted_years[0]
 
-        # Create controls container
+        timeline_wrapper = js.document.createElement("div")
+        timeline_wrapper.className = "timeline-wrapper"
+        timeline_wrapper.style.textAlign = "center"
+
         controls = js.document.createElement("div")
         controls.className = "timeline-controls"
+        controls.style.display = "flex"
+        controls.style.justifyContent = "center"
+        controls.style.alignItems = "center"
+        controls.style.margin = "0 auto"
+        controls.style.marginBottom = "10px"
+        controls.style.marginTop = "10px"
 
-        # Add previous button
         prev_btn = js.document.createElement("button")
         prev_btn.className = "timeline-btn prev-btn"
         prev_btn.textContent = "◄"
@@ -116,16 +115,19 @@ class Timeline:
         prev_btn.onclick = self._input_handlers['prev']
         controls.appendChild(prev_btn)
 
-        # Add play/pause button
-        play_btn = js.document.createElement("button")
-        play_btn.className = f"timeline-btn play-btn {'pause-btn' if self.animation_active else ''}"
-        play_btn.textContent = "⏵︎" if not self.animation_active else "⏸︎"
-        play_btn.title = "Play/Pause Animation"
-        self._input_handlers['play'] = create_proxy(self.toggle_animation)
-        play_btn.onclick = self._input_handlers['play']
-        controls.appendChild(play_btn)
+        year_input = js.document.createElement("input")
+        year_input.type = "number"
+        year_input.min = min_year
+        year_input.max = max_year
+        year_input.value = selected_year
+        year_input.className = "timeline-year-input"
+        year_input.style.margin = "0 10px"
+        year_input.style.width = "80px"
+        year_input.style.textAlign = "center"
+        self._input_handlers['year'] = create_proxy(self.on_year_input_change)
+        year_input.onchange = self._input_handlers['year']
+        controls.appendChild(year_input)
 
-        # Add next button
         next_btn = js.document.createElement("button")
         next_btn.className = "timeline-btn next-btn"
         next_btn.textContent = "►"
@@ -134,25 +136,14 @@ class Timeline:
         next_btn.onclick = self._input_handlers['next']
         controls.appendChild(next_btn)
 
-        # Add controls to container
-        self.container.appendChild(controls)
+        timeline_wrapper.appendChild(controls)
 
-        # Create year input
-        year_input = js.document.createElement("input")
-        year_input.type = "number"
-        year_input.min = min_year
-        year_input.max = max_year
-        year_input.value = selected_year
-        year_input.className = "timeline-year-input"
-        self._input_handlers['year'] = create_proxy(self.on_year_input_change)
-        year_input.onchange = self._input_handlers['year']
-        self.container.appendChild(year_input)
-
-        # Create slider container
         slider_container = js.document.createElement("div")
         slider_container.className = "timeline-slider-container"
+        slider_container.style.width = "70%"
+        slider_container.style.margin = "0 auto"
+        slider_container.style.position = "relative"
 
-        # Create slider
         slider = js.document.createElement("input")
         slider.type = "range"
         slider.min = min_year
@@ -160,42 +151,45 @@ class Timeline:
         slider.step = 1
         slider.value = selected_year
         slider.className = "timeline-slider"
+        slider.style.width = "100%"
         self._input_handlers['slider'] = create_proxy(self.on_slider_change)
         slider.oninput = self._input_handlers['slider']
         slider_container.appendChild(slider)
 
-        # Create range labels
         range_labels = js.document.createElement("div")
         range_labels.className = "timeline-range-labels"
+        range_labels.style.display = "flex"
+        range_labels.style.justifyContent = "space-between"
+        range_labels.style.marginTop = "5px"
 
-        # Add min year label
         min_label = js.document.createElement("span")
         min_label.textContent = str(min_year)
         range_labels.appendChild(min_label)
 
-        # Add max year label
         max_label = js.document.createElement("span")
         max_label.textContent = str(max_year)
         range_labels.appendChild(max_label)
 
         slider_container.appendChild(range_labels)
 
-        # Add slider container to main container
-        self.container.appendChild(slider_container)
+        timeline_wrapper.appendChild(slider_container)
 
-        # Add loading indicator if needed
+        self.container.appendChild(timeline_wrapper)
+
         if loading:
             loading_elem = js.document.createElement("div")
             loading_elem.className = "timeline-loading"
             loading_elem.textContent = "Loading..."
-            self.container.appendChild(loading_elem)
+            loading_elem.style.textAlign = "center"
+            loading_elem.style.marginTop = "10px"
+            timeline_wrapper.appendChild(loading_elem)
+
 
     def on_year_input_change(self, event):
         """Handle year input change"""
         try:
             year = int(event.target.value)
 
-            # Validate year range
             if year < self.min_year:
                 year = self.min_year
                 event.target.value = self.min_year
@@ -203,15 +197,12 @@ class Timeline:
                 year = self.max_year
                 event.target.value = self.max_year
 
-            # Get the current city
             state = self.store.get_state()
             city_id = state.get("selected_city_id")
 
             if city_id:
-                # Select the year
                 CityActions.select_year(city_id, year)
         except ValueError:
-            # Reset to current year if input is invalid
             state = self.store.get_state()
             current_year = state.get("selected_year")
             if current_year:
@@ -222,12 +213,10 @@ class Timeline:
         try:
             year = int(event.target.value)
 
-            # Get the current city
             state = self.store.get_state()
             city_id = state.get("selected_city_id")
 
             if city_id:
-                # Select the year
                 CityActions.select_year(city_id, year)
         except ValueError:
             pass
@@ -245,10 +234,8 @@ class Timeline:
         import asyncio
 
         if self.animation_active:
-            # Stop animation
             SimulationActions.stop_timeline_animation()
         else:
-            # Start animation
             asyncio.ensure_future(SimulationActions.start_timeline_animation())
 
     def cleanup(self):
@@ -256,10 +243,8 @@ class Timeline:
         if self.unsubscribe:
             self.unsubscribe()
 
-        # Clean up event handlers
         for key, handler in self._input_handlers.items():
             handler.destroy()
 
-        # Ensure animation is stopped
         if self.animation_active:
             SimulationActions.stop_timeline_animation()

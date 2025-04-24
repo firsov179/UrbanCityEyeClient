@@ -49,7 +49,6 @@ class GeoActions:
         dispatcher = Dispatcher()
         dispatcher.dispatch("GEO_SEARCH_REQUEST")
 
-        # Prepare query parameters
         params = {"q": query}
         if simulation_id:
             params["simulation_id"] = simulation_id
@@ -75,13 +74,10 @@ class GeoActions:
         dispatcher = Dispatcher()
         dispatcher.dispatch("SELECT_GEO_OBJECT", geo_object)
 
-        # Open the info panel when an object is selected
         dispatcher.dispatch("TOGGLE_INFO_PANEL", True)
 
-        # Center map if requested
         if center_map and geo_object:
             try:
-                # Parse the geometry and find the center
                 geometry = geo_object.get("geometry", {})
                 center = GeoActions.get_geometry_center(geometry)
 
@@ -109,42 +105,35 @@ class GeoActions:
 
         try:
             if geo_type == "Point":
-                # Point is already a center
                 return coords
 
             elif geo_type == "LineString":
-                # For a line, use the middle point
                 if len(coords) > 0:
                     middle_idx = len(coords) // 2
                     return coords[middle_idx]
 
             elif geo_type == "Polygon":
-                # For a polygon, calculate centroid of the exterior ring
                 if len(coords) > 0 and len(coords[0]) > 0:
-                    # Simple average of coordinates (approximate centroid)
-                    points = coords[0]  # Exterior ring
+                    points = coords[0]
                     lng_sum = sum(point[0] for point in points)
                     lat_sum = sum(point[1] for point in points)
                     return [lng_sum / len(points), lat_sum / len(points)]
 
             elif geo_type == "MultiPoint":
-                # Average all points
                 if len(coords) > 0:
                     lng_sum = sum(point[0] for point in coords)
                     lat_sum = sum(point[1] for point in coords)
                     return [lng_sum / len(coords), lat_sum / len(coords)]
 
             elif geo_type == "MultiLineString":
-                # Use the middle point of the first line
                 if len(coords) > 0 and len(coords[0]) > 0:
                     line = coords[0]
                     middle_idx = len(line) // 2
                     return line[middle_idx]
 
             elif geo_type == "MultiPolygon":
-                # Use the centroid of the first polygon
                 if len(coords) > 0 and len(coords[0]) > 0 and len(coords[0][0]) > 0:
-                    points = coords[0][0]  # First polygon's exterior ring
+                    points = coords[0][0]
                     lng_sum = sum(point[0] for point in points)
                     lat_sum = sum(point[1] for point in points)
                     return [lng_sum / len(points), lat_sum / len(points)]
@@ -171,7 +160,6 @@ class GeoActions:
         store = AppStore()
         state = store.get_state()
 
-        # If simulation_id is not provided, use the current one
         if not simulation_id:
             simulation = state.get("simulation")
             if simulation:
@@ -185,7 +173,6 @@ class GeoActions:
         dispatcher = Dispatcher()
         dispatcher.dispatch("GEO_FILTER_REQUEST")
 
-        # Prepare query parameters
         params = {"types": ",".join(types)}
 
         response = await APIClient.get(f"geo-objects/simulation/{simulation_id}/filter", params)
@@ -212,26 +199,20 @@ class GeoActions:
         store = AppStore()
         state = store.get_state()
 
-        # Get current layers and their visibility
         layers = state.get("map_layers", {})
 
-        # Determine new visibility state
         if layer_id in layers:
             layer = layers[layer_id]
             if visible is None:
-                # Toggle current state
                 visible = not layer.get("visible", True)
         else:
-            # Default to visible if layer doesn't exist yet
             if visible is None:
                 visible = True
 
-        # Update the layer
         layers[layer_id] = {
             "id": layer_id,
             "visible": visible
         }
 
-        # Dispatch the update
         dispatcher = Dispatcher()
         dispatcher.dispatch("UPDATE_MAP_LAYERS", layers)

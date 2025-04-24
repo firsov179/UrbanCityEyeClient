@@ -24,7 +24,6 @@ class APIClient:
         """
         url = f"{API_BASE_URL}/{endpoint.lstrip('/')}"
 
-        # Add query parameters if provided
         if params:
             query_string = "&".join([f"{k}={v}" for k, v in params.items()])
             url = f"{url}?{query_string}"

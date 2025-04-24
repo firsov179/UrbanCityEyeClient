@@ -45,7 +45,6 @@ class SimulationActions:
         dispatcher = Dispatcher()
         dispatcher.dispatch("GEO_OBJECTS_REQUEST")
 
-        # Prepare query parameters if bbox is provided
         params = {}
         if bbox:
             params = {
@@ -79,12 +78,10 @@ class SimulationActions:
         if not years or len(years) == 0:
             return {"markers": [], "range": [0, 0]}
 
-        # Sort years
         sorted_years = sorted(years)
         min_year = sorted_years[0]
         max_year = sorted_years[-1]
 
-        # Generate markers
         markers = []
         for year in range(min_year, max_year + 1):
             is_available = year in sorted_years
@@ -124,21 +121,17 @@ class SimulationActions:
         if not current_year or not available_years or len(available_years) == 0:
             return
 
-        # Sort years
         sorted_years = sorted(available_years)
 
-        # Find the next year
         next_year = None
         for year in sorted_years:
             if year > current_year:
                 next_year = year
                 break
 
-        # If there's no next year, loop back to the first
         if next_year is None and len(sorted_years) > 0:
             next_year = sorted_years[0]
 
-        # If we found a next year, select it
         if next_year is not None:
             from .city_actions import CityActions
             CityActions.select_year(city_id, next_year)
@@ -160,21 +153,17 @@ class SimulationActions:
         if not current_year or not available_years or len(available_years) == 0:
             return
 
-        # Sort years
         sorted_years = sorted(available_years, reverse=True)
 
-        # Find the previous year
         prev_year = None
         for year in sorted_years:
             if year < current_year:
                 prev_year = year
                 break
 
-        # If there's no previous year, loop back to the last
         if prev_year is None and len(sorted_years) > 0:
             prev_year = sorted_years[0]
 
-        # If we found a previous year, select it
         if prev_year is not None:
             from .city_actions import CityActions
             CityActions.select_year(city_id, prev_year)
@@ -192,14 +181,10 @@ class SimulationActions:
         store = AppStore()
         state = store.get_state()
 
-        # Set animation state
         dispatcher = Dispatcher()
         dispatcher.dispatch("SET_ANIMATION_STATE", {"active": True})
 
-        # Или, если диспетчер ожидает простое значение:
-        # dispatcher.dispatch("SET_ANIMATION_STATE", True)
 
-        # Получаем годы и город
         available_years = state.get("available_years", [])
         city_id = state.get("selected_city_id")
 
@@ -207,10 +192,8 @@ class SimulationActions:
             dispatcher.dispatch("SET_ANIMATION_STATE", {"active": False})
             return
 
-        # Sort years
         sorted_years = sorted(available_years)
 
-        # Animate through each year
         from .city_actions import CityActions
 
         try:
@@ -228,13 +211,9 @@ class SimulationActions:
                 if not animation_active:
                     break
 
-                # Select the year
                 CityActions.select_year(city_id, year)
 
-                # Wait for the specified delay
-                await asyncio.sleep(delay / 1000)  # Convert ms to seconds
         finally:
-            # Ensure animation state is reset when done
             dispatcher.dispatch("SET_ANIMATION_STATE", {"active": False})
 
     @staticmethod

@@ -14,13 +14,11 @@ def log(msg="", *args, level="info"):
         *args: Additional messages
         level: Log level (info, warn, error)
     """
-    # Convert all arguments to strings and join with space
     if args:
         message = " ".join([str(msg)] + [str(arg) for arg in args])
     else:
         message = str(msg)
 
-    # Log to JavaScript console if available
     try:
         import js
         if level == "error":
@@ -30,7 +28,7 @@ def log(msg="", *args, level="info"):
         else:
             js.console.log(message)
     except ImportError:
-        pass  # js не доступен
+        pass
 
 
 def error(*args):

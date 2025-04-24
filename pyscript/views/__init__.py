@@ -7,7 +7,6 @@ from .timeline import Timeline
 from .map_view import MapView
 from .info_panel import InfoPanel
 
-# Exports
 __all__ = [
     'Timeline',
     'MapView',
