@@ -28,11 +28,9 @@ class Dispatcher:
         """
         log(f"Dispatching action: {action_type}")
 
-        # Set loading state based on action type
         if action_type.endswith("_REQUEST"):
             self._store.update_state({"loading": True, "error": None})
 
-        # Handle navigation actions
         if action_type == "NAVIGATE_TO_SIMULATION":
             self._store.update_state({
                 "navigate_to_simulation": payload,
@@ -52,7 +50,6 @@ class Dispatcher:
                 "loading": False
             })
 
-        # Handle mode selection
         elif action_type == "SELECT_MODE":
             self._store.update_state({
                 "selected_mode_id": payload,
@@ -65,7 +62,6 @@ class Dispatcher:
                 "loading": False
             })
 
-        # Handle different action types
         elif action_type == "SET_CITIES":
             self._store.update_state({"cities": payload, "loading": False})
 
@@ -79,6 +75,11 @@ class Dispatcher:
                 "selected_object": None,
                 "loading": False
             })
+        elif action_type == "SELECT_GEO_OBJECT":
+            self._store.update_state({"selected_object": payload})
+        
+        elif action_type == "TOGGLE_INFO_PANEL":
+             self._store.update_state({"info_panel_open": payload})
 
         elif action_type == "SET_AVAILABLE_YEARS":
             self._store.update_state({"available_years": payload, "loading": False})
@@ -99,7 +100,6 @@ class Dispatcher:
             })
 
         elif action_type == "SELECT_MODE_HOME":
-            # Просто обновляем режим без загрузки данных
             self._store.update_state({
                 "selected_mode_id": payload,
                 "loading": False
@@ -132,6 +132,5 @@ class Dispatcher:
             self._store.update_state({"error": payload, "loading": False})
 
         else:
-            # Generic state update for custom actions
             if payload is not None:
                 self._store.update_state({**payload, "loading": False})

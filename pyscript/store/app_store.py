@@ -18,12 +18,10 @@ class AppStore:
 
     def _initialize(self):
         """Initialize the store with default values"""
-        # Application state
         self._state = {
             "loading": False,
             "error": None,
 
-            # Data state
             "cities": [],
             "selected_city_id": None,
             "available_years": [],
@@ -32,13 +30,11 @@ class AppStore:
             "geo_objects": None,
             "selected_object": None,
 
-            # UI state
             "map_center": None,
             "map_zoom": None,
             "info_panel_open": False
         }
 
-        # Subscribers to state changes
         self._subscribers = []
 
     def get_state(self):
@@ -56,11 +52,9 @@ class AppStore:
             Unsubscribe function
         """
         if callable(callback):
-            # Create a proxy for the callback to make it callable from JavaScript
             proxy_callback = create_proxy(callback)
             self._subscribers.append(proxy_callback)
 
-            # Return unsubscribe function
             def unsubscribe():
                 if proxy_callback in self._subscribers:
                     self._subscribers.remove(proxy_callback)
@@ -75,14 +69,11 @@ class AppStore:
         Args:
             update_dict: Dictionary of state keys and values to update
         """
-        # Update the state
         self._state.update(update_dict)
 
-        # Notify subscribers
         for subscriber in self._subscribers:
             subscriber(self._state)
 
-    # Specific state getters
     def get_cities(self):
         """Get the list of cities"""
         return self._state["cities"]

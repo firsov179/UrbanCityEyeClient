@@ -5,7 +5,7 @@ import asyncio
 from ..utils.api_client import APIClient
 from ..dispatch.dispatcher import Dispatcher
 from ..utils.logging import log, error
-
+from .geo_actions import GeoActions
 
 class CityActions:
     """Actions for managing cities"""
@@ -72,7 +72,6 @@ class CityActions:
         store = AppStore()
         state = store.get_state()
 
-        # Проверяем текущий экран
         current_view = state.get("current_view", "home")
 
         response = await APIClient.get(f"cities/{city_id}")
@@ -84,9 +83,7 @@ class CityActions:
             error("Failed to fetch cities")
             dispatcher.dispatch("API_ERROR", f"Failed to fetch city with id {city_id}")
 
-        # Загружаем дополнительные данные только если находимся на экране симуляции
         if current_view == "simulation":
-            # After selecting a city, fetch available years
             await CityActions.fetch_available_years(city_id)
 
     @staticmethod
@@ -108,7 +105,6 @@ class CityActions:
         if response:
             dispatcher.dispatch("SET_AVAILABLE_YEARS", response)
 
-            # If there are years available, select the first one by default
             if response and len(response) > 0:
                 CityActions.select_year(city_id, response[0])
 
@@ -149,7 +145,6 @@ class CityActions:
         if response:
             dispatcher.dispatch("SET_SIMULATION", response)
 
-            # After fetching simulation, get geo objects for this simulation
             if "id" in response:
                 asyncio.ensure_future(CityActions.fetch_geo_objects(response["id"]))
 
@@ -173,7 +168,6 @@ class CityActions:
         dispatcher = Dispatcher()
         dispatcher.dispatch("GEO_OBJECTS_REQUEST")
 
-        # Prepare query parameters if bbox is provided
         params = {}
         if bbox:
             params = {
@@ -193,18 +187,27 @@ class CityActions:
             return None
 
     @staticmethod
-    def select_geo_object(geo_object):
+    def select_geo_object(geo_object, center_map=True):
         """
-        Select a geographic object
+        Select a geographic object and optionally center the map on it
         
         Args:
-            geo_object: The geo object to select
+            geo_object: GeoJSON Feature to select
+            center_map: Whether to center the map on the object
         """
         dispatcher = Dispatcher()
-        dispatcher.dispatch("SELECT_OBJECT", geo_object)
-
-        # Open the info panel when an object is selected
+        dispatcher.dispatch("SELECT_GEO_OBJECT", geo_object)
         dispatcher.dispatch("TOGGLE_INFO_PANEL", True)
+
+        if center_map and geo_object:
+            try:
+                geometry = geo_object.get("geometry", {})
+                center = GeoActions.get_geometry_center(geometry)
+
+                if center:
+                    dispatcher.dispatch("SET_MAP_VIEW", {"center": center})
+            except Exception as e:
+                error(f"Error centering map on object: {str(e)}")
 
     @staticmethod
     async def fetch_city_details(city_id):

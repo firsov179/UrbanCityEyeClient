@@ -1,252 +1,163 @@
-def predict_next_year_seamless(model, year_sequence, patch_positions, output_dir=OUTPUT_DIR):
-    """
-    Улучшенная функция предсказания с бесшовными переходами между фрагментами
-    и правильной цветопередачей
-    """
-    last_year = year_sequence[-1]
-    next_year = last_year + 5  # Предполагаем шаг в 5 лет
-    
-    print(f"Создание бесшовного прогноза на {next_year} год на основе годов {year_sequence}")
-    
-    # Загружаем базовое изображение последнего года
+def get_feature_color(feature):
+    role = feature.get('properties', {}).get('role', '')
+
+    if role in TRANSPORT_OBJECTS:
+        return TRANSPORT_COLOR
+    elif role in HOUSING_OBJECTS:
+        return HOUSING_COLOR
+    else:
+        return DEFAULT_COLOR
+
+def style_function(feature):
+    return {
+        "color": get_feature_color(feature),
+        "weight": 2,
+        "opacity": 0.7,
+        "fillOpacity": 0.2
+    }
+
+def update_geo_layers(self, geo_objects, preserve_zoom=False):
     try:
-        last_img_path = os.path.join(BASE_DIR, "maps_by_years_image", f"{last_year}.png")
-        if os.path.exists(last_img_path):
-            print(f"Загружаем последнее известное изображение: {last_img_path}")
-            base_img = Image.open(last_img_path)
-            # Извлекаем информацию о цвете фона из верхнего левого угла
-            bg_sample = np.array(base_img)[:100, :100]
-            background_color = np.median(bg_sample.reshape(-1, 3), axis=0) / 255.0
-            print(f"Определен цвет фона: {background_color}")
-            base_array = np.array(base_img) / 255.0
-            base_img.close()
+        if preserve_zoom and self.map:
+            current_zoom = self.map.getZoom()
+            current_center = self.map.getCenter()
+
+        if 'main' in self.layers and self.layers['main']:
+            try:
+                self.map.removeLayer(self.layers['main'])
+            except Exception as e:
+                error(f"Error removing existing layer: {e}")
+            self.layers['main'] = None
+
+        geo_json_str = json.dumps(geo_objects)
+        geo_json_obj = js.JSON.parse(geo_json_str)
+
+        layer = js.L.geoJSON(geo_json_obj, {"style": style_function})
+
+        layer.addTo(self.map)
+        self.layers['main'] = layer
+
+        if not preserve_zoom:
+            try:
+                bounds = layer.getBounds()
+                if bounds and hasattr(bounds, 'isValid') and bounds.isValid():
+                    self.map.fitBounds(bounds)
+            except Exception as e:
+                log(f"Could not fit map to bounds: {e}")
         else:
-            print("Последнее известное изображение не найдено, создаем чисто белое изображение.")
-            background_color = np.array([1.0, 1.0, 1.0])
-            base_array = np.ones((ORIG_HEIGHT, ORIG_WIDTH, NUM_CHANNELS))
+            if 'current_zoom' in locals() and 'current_center' in locals():
+                try:
+                    self.map.setView([current_center.lat, current_center.lng], current_zoom)
+                except Exception as e:
+                    error(f"Error restoring zoom and center: {e}")
+
+        log("GeoJSON layer updated successfully")
+
     except Exception as e:
-        print(f"Ошибка при загрузке базового изображения: {e}")
-        background_color = np.array([1.0, 1.0, 1.0])
-        base_array = np.ones((ORIG_HEIGHT, ORIG_WIDTH, NUM_CHANNELS))
-    
-    # 1. ПРЕДВАРИТЕЛЬНЫЙ ЭТАП: Уменьшаем размер изображения для быстрого первого прохода
-    scale_factor = 0.1  # 10% от оригинального размера
-    small_height = int(ORIG_HEIGHT * scale_factor)
-    small_width = int(ORIG_WIDTH * scale_factor)
-    small_patch_size = int(PATCH_SIZE * scale_factor)
-    
-    print(f"Создание предварительного изображения размером {small_width}x{small_height}")
-    
-    # Создаем уменьшенную версию базового изображения
-    base_small = Image.fromarray((base_array * 255).astype(np.uint8))
-    base_small = base_small.resize((small_width, small_height), Image.LANCZOS)
-    small_base_array = np.array(base_small) / 255.0
-    
-    # Создаем новое изображение для прогноза уменьшенного размера
-    small_result = np.full((small_height, small_width, NUM_CHANNELS), background_color)
-    
-    # 2. ОСНОВНОЙ ЭТАП: Полноразмерное прогнозирование с перекрытием
-    print("Создание полноразмерного прогноза с перекрытием")
-    
-    # Создаем новое изображение для окончательного результата
-    full_result = np.full((ORIG_HEIGHT, ORIG_WIDTH, NUM_CHANNELS), background_color)
-    weights = np.zeros((ORIG_HEIGHT, ORIG_WIDTH))
-    
-    # Использование окна с плавным взвешиванием для устранения видимых краев
-    def gaussian_weight(size):
-        """Создает гауссово окно весов для сглаживания границ"""
-        x = np.linspace(-1, 1, size)
-        y = np.linspace(-1, 1, size)
-        x, y = np.meshgrid(x, y)
-        g = np.exp(-(x**2 + y**2) / 0.5)
-        return g / g.max()
-    
-    # Создаем веса для сглаживания
-    weight_window = gaussian_weight(PATCH_SIZE)
-    
-    # Определяем шаг между центрами фрагментов (с перекрытием)
-    overlap = PATCH_SIZE // 2  # 50% перекрытие
-    stride = PATCH_SIZE - overlap
-    
-    # Создаем сетку позиций с перекрытием
-    grid_positions = []
-    for y in range(0, ORIG_HEIGHT - PATCH_SIZE + 1, stride):
-        for x in range(0, ORIG_WIDTH - PATCH_SIZE + 1, stride):
-            grid_positions.append((y, x))
-    
-    print(f"Создано {len(grid_positions)} позиций сетки с перекрытием 50%")
-    
-    # Находим ближайший реальный фрагмент для каждой позиции в сетке
-    grid_to_real = {}
-    for grid_pos in grid_positions:
-        grid_y, grid_x = grid_pos
-        
-        # Находим ближайший реальный фрагмент
-        min_dist = float('inf')
-        closest_pos = None
-        
-        for pos in patch_positions:
-            real_y, real_x = pos
-            dist = ((real_y - grid_y) ** 2 + (real_x - grid_x) ** 2) ** 0.5
-            if dist < min_dist:
-                min_dist = dist
-                closest_pos = pos
-        
-        if closest_pos is not None:
-            grid_to_real[grid_pos] = closest_pos
-    
-    # Обрабатываем сетку батчами
-    batch_size = 4
-    processed_count = 0
-    
-    for i in range(0, len(grid_positions), batch_size):
-        # Очищаем память
-        gc.collect()
-        
-        batch_grid_positions = grid_positions[i:i+batch_size]
-        X_batch = []
-        valid_grid_positions = []
-        
-        # Загружаем фрагменты для каждой позиции сетки
-        for grid_pos in batch_grid_positions:
-            if grid_pos in grid_to_real:
-                real_pos = grid_to_real[grid_pos]
-                
-                # Загружаем последовательность фрагментов
-                input_sequence = []
-                valid_sequence = True
-                
-                for year in year_sequence:
-                    patch_path = os.path.join(PATCHES_DIR, str(year), f"{year}_{real_pos[0]}_{real_pos[1]}.png")
-                    if os.path.exists(patch_path):
-                        img = Image.open(patch_path)
-                        # Убеждаемся в правильном размере
-                        if img.size[0] != PATCH_SIZE or img.size[1] != PATCH_SIZE:
-                            img = img.resize((PATCH_SIZE, PATCH_SIZE), Image.LANCZOS)
-                        img_array = np.array(img) / 255.0
-                        input_sequence.append(img_array)
-                        img.close()
-                    else:
-                        valid_sequence = False
-                        break
-                
-                if valid_sequence and len(input_sequence) == len(year_sequence):
-                    X_batch.append(input_sequence)
-                    valid_grid_positions.append(grid_pos)
-        
-        if not X_batch:
-            continue
-        
-        # Предсказываем фрагменты
-        X_batch_array = np.array(X_batch)
-        predictions = model.predict(X_batch_array, verbose=0)
-        
-        # Обновляем результат с весовым сглаживанием
-        for grid_pos, pred in zip(valid_grid_positions, predictions):
-            grid_y, grid_x = grid_pos
-            
-            # Обрезаем размер фрагмента, если он выходит за границы
-            patch_h, patch_w = pred.shape[:2]
-            effective_h = min(patch_h, ORIG_HEIGHT - grid_y)
-            effective_w = min(patch_w, ORIG_WIDTH - grid_x)
-            
-            if effective_h <= 0 or effective_w <= 0:
-                continue
-            
-            # Коррекция цвета - преобразуем все неосновные цвета к белому фону
-            # Это предотвращает появление желтого оттенка
-            pred_corrected = pred.copy()
-            
-            # Определяем области, которые должны быть белым фоном
-            # (предполагаем, что фон соответствует пикселям со значениями > 0.8)
-            high_value_mask = np.all(pred > 0.8, axis=-1)
-            
-            # Преобразуем эти области в чисто белые
-            for c in range(NUM_CHANNELS):
-                pred_corrected[high_value_mask, c] = 1.0
-            
-            # Применяем весовое окно для сглаживания границ
-            effective_weight = weight_window[:effective_h, :effective_w]
-            
-            # Обновляем изображение с весами
-            for c in range(NUM_CHANNELS):
-                full_result[grid_y:grid_y+effective_h, grid_x:grid_x+effective_w, c] += pred_corrected[:effective_h, :effective_w, c] * effective_weight
-            
-            # Обновляем веса
-            weights[grid_y:grid_y+effective_h, grid_x:grid_x+effective_w] += effective_weight
-        
-        processed_count += len(valid_grid_positions)
-        print(f"Обработано {processed_count}/{len(grid_positions)} позиций сетки")
-        
-        # Сохраняем промежуточные результаты
-        if processed_count % 100 == 0 or processed_count >= len(grid_positions):
-            # Нормализуем промежуточный результат
-            temp_result = full_result.copy()
-            temp_weights = weights.copy()
-            
-            # Нормализуем только области с ненулевыми весами
-            mask = temp_weights > 0
-            for c in range(NUM_CHANNELS):
-                temp_result[mask, c] = temp_result[mask, c] / temp_weights[mask]
-            
-            # Для областей с нулевыми весами используем базовое изображение
-            zero_mask = ~mask
-            if np.any(zero_mask):
-                for c in range(NUM_CHANNELS):
-                    temp_result[zero_mask, c] = base_array[zero_mask, c]
-            
-            # Применяем пороговое значение для преобразования почти белых пикселей в полностью белые
-            # Это устраняет проблему с желтым оттенком
-            white_mask = np.all(temp_result > 0.85, axis=-1)
-            for c in range(NUM_CHANNELS):
-                temp_result[white_mask, c] = 1.0
-            
-            # Сохраняем промежуточный результат
-            temp_img = Image.fromarray((temp_result * 255).astype(np.uint8))
-            temp_path = os.path.join(output_dir, f"temp_prediction_{next_year}_{processed_count}.png")
-            temp_img.save(temp_path)
-            print(f"Промежуточный результат сохранен: {temp_path}")
-    
-    # Нормализуем итоговый результат
-    final_result = full_result.copy()
-    final_weights = weights.copy()
-    
-    # Нормализуем области с ненулевыми весами
-    mask = final_weights > 0
-    for c in range(NUM_CHANNELS):
-        final_result[mask, c] = final_result[mask, c] / final_weights[mask]
-    
-    # Для областей с нулевыми весами используем базовое изображение
-    zero_mask = ~mask
-    if np.any(zero_mask):
-        for c in range(NUM_CHANNELS):
-            final_result[zero_mask, c] = base_array[zero_mask, c]
-    
-    # Применяем пороговое значение для преобразования почти белых пикселей в полностью белые
-    white_mask = np.all(final_result > 0.85, axis=-1)
-    for c in range(NUM_CHANNELS):
-        final_result[white_mask, c] = 1.0
-    
-    # Применяем сглаживание для удаления оставшихся артефактов
+        import traceback
+        error(f"Error updating geo layers: {str(e)}")
+        error(traceback.format_exc())
+
+
+
+
+
+
+
+
+def get_feature_color(feature):
+    role = feature.get('properties', {}).get('role', '')
+
+    for category, color in CATEGORY_COLORS.items():
+        if role.startswith(category):
+            return color
+
+    return DEFAULT_COLOR
+
+
+
+
+
+def style_function(feature):
+    return {
+        "color": get_feature_color(feature),
+        "weight": 2,
+        "opacity": 0.7,
+        "fillOpacity": 0.2
+    }
+
+def update_geo_layers(self, geo_objects, preserve_zoom=False):
     try:
-        from scipy.ndimage import gaussian_filter
-        smoothed_result = final_result.copy()
-        for c in range(NUM_CHANNELS):
-            smoothed_result[:, :, c] = gaussian_filter(final_result[:, :, c], sigma=0.5)
-        final_result = smoothed_result
-        print("Применено гауссово сглаживание")
-    except:
-        print("Не удалось применить сглаживание")
-    
-    # Повторно применяем коррекцию белого
-    white_mask = np.all(final_result > 0.85, axis=-1)
-    for c in range(NUM_CHANNELS):
-        final_result[white_mask, c] = 1.0
-    
-    # Сохраняем окончательный результат
-    final_path = os.path.join(output_dir, f"seamless_prediction_{next_year}.png")
-    final_img = Image.fromarray((final_result * 255).astype(np.uint8))
-    final_img.save(final_path)
-    print(f"Окончательное бесшовное изображение сохранено: {final_path}")
-    
-    return next_year, final_result
+        if preserve_zoom and self.map:
+            current_zoom = self.map.getZoom()
+            current_center = self.map.getCenter()
+
+        if 'main' in self.layers and self.layers['main']:
+            try:
+                self.map.removeLayer(self.layers['main'])
+            except Exception as e:
+                error(f"Error removing existing layer: {e}")
+            self.layers['main'] = None
+
+        geo_json_str = json.dumps(geo_objects)
+        geo_json_obj = js.JSON.parse(geo_json_str)
+
+        layer = js.L.geoJSON(geo_json_obj, {"style": style_function})
+
+        layer.addTo(self.map)
+        self.layers['main'] = layer
+
+        if not preserve_zoom:
+            try:
+                bounds = layer.getBounds()
+                if bounds and hasattr(bounds, 'isValid') and bounds.isValid():
+                    self.map.fitBounds(bounds)
+            except Exception as e:
+                log(f"Could not fit map to bounds: {e}")
+        else:
+            if 'current_zoom' in locals() and 'current_center' in locals():
+                try:
+                    self.map.setView([current_center.lat, current_center.lng], current_zoom)
+                except Exception as e:
+                    error(f"Error restoring zoom and center: {e}")
+
+        log("GeoJSON layer updated successfully")
+
+    except Exception as e:
+        import traceback
+        error(f"Error updating geo layers: {str(e)}")
+        error(traceback.format_exc())
+
+
+
+
+def get_feature_color(feature):
+    properties = feature.get('properties', {})
+    role = properties.get('role', '')
+
+    if role in CATEGORY_COLORS:
+        return CATEGORY_COLORS[role]
+
+    for category, color in CATEGORY_COLORS.items():
+        if role.startswith(category):
+            return color
+
+    return DEFAULT_COLOR
+
+
+
+
+def style_function(feature):
+    return {
+        "color": get_feature_color(feature),
+        "weight": 2,
+        "opacity": 0.7,
+        "fillOpacity": 0.2
+    }
+
+
+
+
+
+
+
