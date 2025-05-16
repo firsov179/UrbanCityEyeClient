@@ -88,11 +88,17 @@ class Timeline:
         sorted_years = sorted(available_years)
         min_year = sorted_years[0]
         max_year = sorted_years[-1]
+        
+        min_year = 5 * (min_year // 5)
+        max_year = 5 * ((max_year + 4) // 5)
+        
         self.min_year = min_year
         self.max_year = max_year
 
         if not selected_year:
             selected_year = sorted_years[0]
+        else:
+            selected_year = 5 * (selected_year // 5)
 
         timeline_wrapper = js.document.createElement("div")
         timeline_wrapper.className = "timeline-wrapper"
@@ -148,7 +154,7 @@ class Timeline:
         slider.type = "range"
         slider.min = min_year
         slider.max = max_year
-        slider.step = 1
+        slider.step = 5
         slider.value = selected_year
         slider.className = "timeline-slider"
         slider.style.width = "100%"
@@ -188,7 +194,7 @@ class Timeline:
     def on_year_input_change(self, event):
         """Handle year input change"""
         try:
-            year = int(event.target.value)
+            year = int(event.target.value) // 5 * 5
 
             if year < self.min_year:
                 year = self.min_year
@@ -211,7 +217,7 @@ class Timeline:
     def on_slider_change(self, event):
         """Handle slider change"""
         try:
-            year = int(event.target.value)
+            year = int(event.target.value)  // 5 * 5
 
             state = self.store.get_state()
             city_id = state.get("selected_city_id")
