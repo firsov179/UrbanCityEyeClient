@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Urban City Eye</title>
+
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/map.css">
+    <link rel="stylesheet" href="css/home.css">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <link rel="stylesheet" href="https://pyscript.net/releases/2023.05.1/pyscript.css" />
+    <script defer src="https://pyscript.net/releases/2023.05.1/pyscript.js"></script>
+
+    <script src="js/helpers.js"></script>
+
+    <py-config type="toml">
+        trminal = false
+
+        [[fetch]]
+        files = [
+            "./pyscript/actions/__init__.py",
+            "./pyscript/actions/city_actions.py",
+            "./pyscript/actions/simulation_actions.py",
+            "./pyscript/actions/geo_actions.py",
+            "./pyscript/store/__init__.py",
+            "./pyscript/store/app_store.py",
+            "./pyscript/dispatch/__init__.py",
+            "./pyscript/dispatch/dispatcher.py",
+            "./pyscript/views/__init__.py",
+            "./pyscript/views/timeline.py",
+            "./pyscript/views/map_view.py",
+            "./pyscript/views/info_panel.py",
+            "./pyscript/views/home_view.py",
+            "./pyscript/views/simulation_view.py",
+            "./pyscript/utils/__init__.py",
+            "./pyscript/utils/api_client.py",
+            "./pyscript/utils/historical_periods.py",
+            "./pyscript/utils/geo_utils.py",
+            "./pyscript/utils/logging.py",
+            "./pyscript/config.py",
+            "./pyscript/main.py"
+        ]
+    </py-config>
+
+    <style>
+        .screen {
+            display: none;
+            width: 100%;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            padding: 8px 16px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .back-button:hover {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <div id="home-screen" class="screen active">
+        <div class="home-container">
+            <div class="language-switcher">
+                <button class="lang-btn active" data-lang="en">EN</button>
+                <button class="lang-btn" data-lang="ru">RU</button>
+            </div>
+            <h1 class="home-title">Urban City Eye</h1>
+
+            <div id="europe-map-container">
+                <div class="map-wrapper">
+                    <div class="map-inner">
+                        <div class="map-image"></div> 
+                        <div id="city-markers-container"></div>
+                    </div>
+                    <div class="map-compass"></div>
+                </div>
+            </div>
+
+            <div id="home-info-panel">
+                <h2 id="city-info-title">Select a City</h2>
+                <div id="city-info-content">
+                    <p data-en="Click on a city to view information." data-ru="Нажмите на город, чтобы просмотреть информацию.">                </div>
+
+                <div id="mode-selection">
+                    <div class="mode-options">
+                        <div class="mode-option active" id="start-simulation" data-mode="transport">
+                            <div class="mode-icon transport-icon"></div>
+                            <div class="mode-label"  data-en="View Transport Infrastructure" data-ru="Посмотреть транспортную инфраструктуру">
+                                View Transport Infrastructure
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="simulation-screen" class="screen">
+        <div class="simulation-container">
+            <div id="timeline-container"></div>
+            <button id="back-to-home" class="back-button">✕</button>
+
+            <div class="content-container">
+                <div id="map-container" class="map-container"></div>
+
+                <div id="info-panel" class="info-panel">
+                    <h2>Information</h2>
+                    <div id="info-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <py-script src="./pyscript/main.py"></py-script>
+</body>
+</html>
+

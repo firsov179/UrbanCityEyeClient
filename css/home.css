@@ -1,0 +1,345 @@
+/* Стили для контейнера с картой Европы */
+.home-container {
+    display: flex;
+    height: 100vh;
+    background-color: #f5f5f5;
+    overflow: hidden;
+}
+
+.home-title {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    margin: 0;
+    color: #333;
+    font-size: 24px;
+    z-index: 10;
+}
+
+#europe-map-container {
+    flex: 1;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px; /* Поля вокруг карты */
+    background-color: #2e8cb5; /* Цвет фона вокруг карты */
+}
+
+.map-wrapper {
+    position: relative;
+    width: 90%;
+    height: 90%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #e6ecff;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.map-inner {
+    position: relative;
+    width: 85%;
+    height: 85%;
+    max-width: 1200px;
+    aspect-ratio: 2328/1886;
+    background-image: url('../images/europe-map.svg');
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+#city-markers-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    background-size: contain;
+    background-position: center;
+    z-index: 10;
+}
+
+/* Маркер города с абсолютным позиционированием */
+.city-marker {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background-color: #3498db;
+    border: 2px solid white;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(0,0,0,0.3);
+    transition: all 0.3s ease;
+    transform: translate(-50%, -50%); /* Центрирование точки */
+    pointer-events: auto; /* Включаем события клика */
+    z-index: 10;
+}
+
+.city-marker:hover, .city-marker.active {
+    width: 22px;
+    height: 22px;
+    background-color: #e74c3c;
+}
+
+.city-marker-label {
+    position: absolute;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    white-space: nowrap;
+    pointer-events: none;
+    transform: translate(-50%, -130%);
+    transition: opacity 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    z-index: 20;
+}
+
+/* Визуальный декор для карты */
+.map-title {
+    position: absolute;
+    top: 15px;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    font-size: 24px;
+    font-weight: bold;
+    color: #2c3e50;
+    text-shadow: 0 1px 2px rgba(255,255,255,0.8);
+    pointer-events: none;
+}
+
+.map-compass {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    background-image: url('../images/compass.svg');
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+/* Информационная панель */
+#home-info-panel {
+    width: 350px;
+    background-color: white;
+    padding: 30px;
+    box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+#city-info-title {
+    margin-top: 30px;
+    margin-bottom: 20px;
+    color: #2c3e50;
+    border-bottom: 1px solid #eee;
+    font-size: 24px;
+ }
+
+ #city-info-content {
+    flex: 1;
+ }
+
+ .city-detail {
+    margin-bottom: 15px;
+ }
+
+ .city-detail-label {
+    font-weight: bold;
+    color: #7f8c8d;
+    margin-bottom: 5px;
+ }
+
+ .city-description {
+    margin-top: 20px;
+    line-height: 1.6;
+ }
+
+ /* Выбор режима моделирования */
+ #mode-selection {
+    margin-top: 30px;
+    border-top: 1px solid #ecf0f1;
+    padding-top: 20px;
+ }
+
+ .mode-options {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 15px;
+ }
+
+ .coming-soon-message {
+    padding: 8px 16px;
+    background-color: #f8f9fa;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin: 10px 0;
+    text-align: center;
+    font-style: italic;
+    color: #6c757d;
+}
+
+ .mode-option {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    border: 2px solid #ecf0f1;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: #f5f5f5;
+    flex-direction: column;
+ }
+
+ .mode-option:hover {
+     border-color: #3498db;
+     background-color: #f9f9f9;
+ }
+
+  .mode-option.active {
+    border-color: #3498db;
+    background-color: #ebf5fb;
+}
+
+ .mode-icon {
+     width: 32px;
+     height: 32px;
+     margin-right: 15px;
+}
+
+ .transport-icon {
+     background-image: url('../images/transport-icon.svg');
+ }
+
+ .housing-icon {
+     background-image: url('../images/housing-icon.svg');
+ }
+
+ .mode-label {
+     font-weight: bold;
+     color: #2c3e50;
+ }
+
+ /* Кнопка запуска симуляции */
+ .primary-button {
+     margin-top: 30px;
+     padding: 12px 20px;
+     background-color: #3498db;
+     color: white;
+     border: none;
+     border-radius: 4px;
+     font-size: 16px;
+     font-weight: bold;
+     cursor: pointer;
+     transition: background-color 0.3s ease;
+ }
+
+ .primary-button:hover {
+     background-color: #2980b9;
+ }
+
+
+ .primary-button:disabled {
+     background-color: #bdc3c7;
+     cursor: not-allowed;
+ }
+
+ /* Стили для переключателя языка */
+.language-switcher {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    z-index: 100;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 5px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.lang-btn {
+    padding: 8px 12px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-weight: bold;
+    color: #333;
+    transition: all 0.3s ease;
+}
+
+.lang-btn.active {
+    background-color: #3498db;
+    color: white;
+}
+
+.lang-btn:hover:not(.active) {
+    background-color: #f1f1f1;
+}
+
+
+/* Адаптация для мобильных устройств */
+@media (max-width: 768px) {
+    .home-container {
+        flex-direction: column;
+    }
+
+    #europe-map-container {
+        height: 50vh;
+        padding: 20px;
+    }
+
+    .map-wrapper {
+        width: 95%;
+        height: 95%;
+    }
+
+    .map-inner {
+        width: 90%;
+        height: 90%;
+    }
+
+    .city-marker {
+        width: 18px;
+        height: 18px;
+    }
+
+    .city-marker:hover, .city-marker.active {
+        width: 24px;
+        height: 24px;
+    }
+
+    .city-marker-label {
+        font-size: 14px;
+        padding: 2px 6px;
+    }
+
+    #home-info-panel {
+        width: 100%;
+        height: 50vh;
+        padding: 20px;
+    }
+
+    .map-title {
+        visibility: hidden;
+        font-size: 18px;
+    }
+
+    .map-compass {
+        width: 40px;
+        height: 40px;
+    }
+}
