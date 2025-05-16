@@ -23,7 +23,7 @@ class Timeline:
         self.unsubscribe = None
         self.animation_active = False
         self.min_year = 1500
-        self.max_year = 2020
+        self.max_year = 2050
         self._input_handlers = {}
 
     def initialize(self):
