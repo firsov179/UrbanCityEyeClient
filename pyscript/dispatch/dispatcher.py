@@ -91,6 +91,7 @@ class Dispatcher:
                 payload = {"active": payload}
 
         elif action_type == "SELECT_YEAR":
+            payload = payload // 5 * 5
             self._store.update_state({
                 "selected_year": payload,
                 "simulation": None,
